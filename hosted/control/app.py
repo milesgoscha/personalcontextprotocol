@@ -40,9 +40,11 @@ def create_app() -> FastAPI:
     )
 
     # Register routes
-    from .routes import auth_router
+    from .routes import auth_router, nodes_router, proxy_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+    app.include_router(nodes_router, prefix="/api/v1/node", tags=["nodes"])
+    app.include_router(proxy_router, prefix="/api/v1/node", tags=["proxy"])
 
     @app.get("/health")
     async def health():
