@@ -1,0 +1,491 @@
+"""
+PCP Node FastAPI Application.
+
+Exposes PCP operations over HTTP with proper auth handling.
+"""
+
+import os
+from pathlib import Path
+from typing import Any
+
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel
+
+from pcp.auth.grants import Grant, GrantStatus, GrantStore, TrustTier
+from pcp.auth.scopes import Operation, validate_scope
+from pcp.auth.tokens import Token, init_token_store, verify_token
+from pcp.models.envelope import ObjectType
+
+from .operations import PCPOperations
+from .storage import Storage
+
+
+# Request/Response models
+
+class QueryRequest(BaseModel):
+    object_types: list[str]
+    disclosure: str = "summary"
+    filter: dict[str, Any] | None = None
+    timerange: dict[str, Any] | None = None
+    limit: int = 100
+    cursor: str | None = None
+    ids: list[str] | None = None
+    summarize: bool = False
+    tags_include: list[str] | None = None  # Require ALL of these tags
+    tags_exclude: list[str] | None = None  # Exclude items with ANY of these
+
+
+class ObserveRequest(BaseModel):
+    objects: list[dict[str, Any]]
+    ingest_mode: str = "append"
+    dedupe_keys: list[str] | None = None
+
+
+class LearnRequest(BaseModel):
+    key: str
+    statement: str
+    confidence: float = 1.0
+    category: str | None = None
+    derived_from: list[str] | None = None
+    upsert: bool = True
+
+
+class ReflectRequest(BaseModel):
+    prompt: str
+    scope: str = "custom"
+    horizon: dict[str, str] | None = None
+    context: list[str] | None = None
+    save: bool = False
+    replace_scope: bool = False
+
+
+# Dependency for token verification
+
+async def get_token(authorization: str | None = Header(None)) -> Token | None:
+    """Extract and verify token from Authorization header."""
+    if not authorization:
+        return None
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+    token_string = authorization[7:]
+    token = verify_token(token_string)
+
+    if token is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return token
+
+
+async def require_token(token: Token | None = Depends(get_token)) -> Token:
+    """Require a valid token."""
+    if token is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return token
+
+
+def require_admin(token: Token) -> None:
+    """
+    Require admin access for grant management operations.
+
+    Admin access is granted if:
+    - Token has pcp:admin scope, OR
+    - Token is from local trust tier (auto-approved local agents)
+
+    NOTE: Currently local trust tier implies full admin access. This matches
+    the trust model where local agents are on the user's machine and fully
+    trusted. If we ever need "local but sandboxed" agents, this should be
+    changed to require explicit pcp:admin scope even for local tokens.
+    """
+    has_admin_scope = any(
+        str(s) == "pcp:admin" or str(s).startswith("pcp:admin")
+        for s in token.scopes
+    )
+    is_local = token.trust_tier == "local"
+
+    if not has_admin_scope and not is_local:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required (pcp:admin scope or local trust tier)"
+        )
+
+
+def create_app(
+    data_dir: str | Path | None = None,
+    public_url: str | None = None,
+    node_id: str | None = None,
+) -> FastAPI:
+    """
+    Create the PCP Node FastAPI application.
+
+    Args:
+        data_dir: Directory for persistent storage
+        public_url: Public URL for this node (for discovery)
+        node_id: Node identifier (pcp:// URI)
+    """
+    if data_dir is None:
+        # Check environment variable, fall back to ~/.pcp/data
+        data_dir = os.environ.get("PCP_DATA_DIR", str(Path.home() / ".pcp" / "data"))
+    data_dir = Path(data_dir)
+
+    # URLs from args, environment, or defaults
+    _public_url = public_url or os.environ.get("PCP_PUBLIC_URL", "http://localhost:6001")
+    _node_id = node_id or os.environ.get("PCP_NODE_ID", "pcp://local")
+
+    # Initialize persistent stores
+    storage = Storage(data_dir=data_dir)
+    ops = PCPOperations(storage=storage, node_id=_node_id)
+    grant_store = GrantStore(data_dir=data_dir)
+    init_token_store(data_dir)  # Initialize token persistence
+
+    app = FastAPI(
+        title="PCP Node",
+        description="Personal Context Protocol Node Server",
+        version="0.1.0",
+    )
+
+    @app.get("/")
+    async def root():
+        """Root endpoint."""
+        return {"name": "PCP Node", "version": "0.1.0"}
+
+    @app.get("/.well-known/pcp")
+    async def well_known_pcp():
+        """
+        PCP discovery endpoint.
+
+        Returns node metadata for pcp://me resolution.
+        Agents use this to discover the API endpoint, auth, and grants URLs.
+        """
+        return {
+            "node_id": _node_id,
+            "version": "0.1.0",
+            "endpoint": f"{_public_url}/api",
+            "auth": {
+                "type": "bearer",
+                "token_endpoint": f"{_public_url}/api/token",
+                "grants_endpoint": f"{_public_url}/api/grants",
+            },
+            "capabilities": {
+                "operations": ["describe", "query", "observe", "learn", "reflect"],
+                "disclosure_levels": ["summary", "detail", "raw"],
+                "trust_tiers": ["local", "first_party_remote", "third_party"],
+            },
+            "mcp": {
+                "available": True,
+                "transport": "stdio",
+                "command": "python3 -m pcp.mcp.server",
+            },
+        }
+
+    @app.get("/api/describe")
+    async def describe(token: Token | None = Depends(get_token)):
+        """Get node capabilities."""
+        return ops.describe(token)
+
+    @app.post("/api/query")
+    async def query(request: QueryRequest, token: Token = Depends(require_token)):
+        """Query objects."""
+        try:
+            return ops.query(
+                token=token,
+                object_types=request.object_types,
+                disclosure=request.disclosure,
+                filter=request.filter,
+                timerange=request.timerange,
+                limit=request.limit,
+                cursor=request.cursor,
+                ids=request.ids,
+                summarize=request.summarize,
+                tags_include=request.tags_include,
+                tags_exclude=request.tags_exclude,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+    @app.post("/api/observe")
+    async def observe(request: ObserveRequest, token: Token = Depends(require_token)):
+        """Ingest events."""
+        try:
+            return ops.observe(
+                token=token,
+                objects=request.objects,
+                ingest_mode=request.ingest_mode,
+                dedupe_keys=request.dedupe_keys,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+    @app.post("/api/learn")
+    async def learn(request: LearnRequest, token: Token = Depends(require_token)):
+        """Store a learning."""
+        try:
+            return ops.learn(
+                token=token,
+                key=request.key,
+                statement=request.statement,
+                confidence=request.confidence,
+                category=request.category,
+                derived_from=request.derived_from,
+                upsert=request.upsert,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+    @app.post("/api/reflect")
+    async def reflect(request: ReflectRequest, token: Token = Depends(require_token)):
+        """Generate a reflection."""
+        try:
+            return ops.reflect(
+                token=token,
+                prompt=request.prompt,
+                scope=request.scope,
+                horizon=request.horizon,
+                context=request.context,
+                save=request.save,
+                replace_scope=request.replace_scope,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+    # Identity endpoints
+
+    @app.get("/api/identity")
+    async def get_identity(token: Token = Depends(require_token)):
+        """Get user identity."""
+        try:
+            validate_scope(
+                token.scopes,
+                Operation.IDENTITY,
+                ObjectType.IDENTITY,
+                requires_write=False,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+        identity = storage.get_identity()
+        if identity is None:
+            raise HTTPException(status_code=404, detail="Identity not set")
+        return identity
+
+    @app.put("/api/identity")
+    async def set_identity(identity: dict[str, Any], token: Token = Depends(require_token)):
+        """Set user identity."""
+        try:
+            validate_scope(
+                token.scopes,
+                Operation.IDENTITY,
+                ObjectType.IDENTITY,
+                requires_write=True,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
+        return storage.set_identity(identity)
+
+    # Token endpoint (for local dev - in production, use proper auth flow)
+
+    class TokenRequest(BaseModel):
+        subject: str
+        scopes: list[str]
+        hours: int = 24
+
+    @app.post("/api/token")
+    async def create_token_endpoint(request: TokenRequest):
+        """Create an access token (dev only)."""
+        from datetime import timedelta
+        from pcp.auth.tokens import create_token
+
+        token_string, token_obj = create_token(
+            subject=request.subject,
+            scopes=request.scopes,
+            expires_in=timedelta(hours=request.hours),
+        )
+        return {
+            "token": token_string,
+            "subject": token_obj.subject,
+            "expires_at": token_obj.expires_at.isoformat(),
+        }
+
+    # Grant management endpoints
+
+    class GrantRequest(BaseModel):
+        client_id: str
+        client_name: str
+        scopes_requested: list[str]
+        reason: str
+        callback_url: str | None = None
+        trust_tier: str = "third_party"
+
+    class GrantApproval(BaseModel):
+        scopes: list[str] | None = None
+        lifetime_hours: int | None = None
+
+    class GrantDenial(BaseModel):
+        reason: str | None = None
+
+    @app.post("/api/grants/request")
+    async def request_grant(request: GrantRequest):
+        """
+        Request a grant for API access.
+
+        Third-party agents use this to request scoped access.
+        Returns a grant_id and claim_secret. The claim_secret must be stored
+        securely and provided when claiming the token.
+        """
+        try:
+            tier = TrustTier(request.trust_tier)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid trust tier: {request.trust_tier}")
+
+        grant, claim_secret = grant_store.create(
+            client_id=request.client_id,
+            client_name=request.client_name,
+            scopes_requested=request.scopes_requested,
+            reason=request.reason,
+            callback_url=request.callback_url,
+            trust_tier=tier,
+        )
+
+        return {
+            "grant_id": grant.grant_id,
+            "claim_secret": claim_secret,  # Client must store this securely!
+            "status": grant.status.value,
+            "message": "Grant approved automatically" if grant.status == GrantStatus.APPROVED else "Grant pending approval",
+        }
+
+    @app.get("/api/grants")
+    async def list_grants(
+        status: str | None = None,
+        client_id: str | None = None,
+        token: Token = Depends(require_token),
+    ):
+        """List grants. Requires admin access."""
+        require_admin(token)
+        status_filter = GrantStatus(status) if status else None
+        grants = grant_store.list_grants(status=status_filter, client_id=client_id)
+        return {
+            "grants": [g.to_dict() for g in grants],
+            "count": len(grants),
+        }
+
+    @app.get("/api/grants/{grant_id}")
+    async def get_grant(grant_id: str, token: Token = Depends(require_token)):
+        """
+        Get a specific grant by ID.
+
+        Requires either:
+        - Admin access (can see any grant), OR
+        - The caller is the original requester (can only see their own grant)
+        """
+        grant = grant_store.get(grant_id)
+        if not grant:
+            raise HTTPException(status_code=404, detail="Grant not found")
+
+        # Check if caller is admin or the original requester
+        is_admin = token.trust_tier == "local" or any(
+            str(s) == "pcp:admin" for s in token.scopes
+        )
+        is_owner = token.subject == grant.client_id
+
+        if not is_admin and not is_owner:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        return grant.to_dict()
+
+    @app.post("/api/grants/{grant_id}/approve")
+    async def approve_grant(
+        grant_id: str,
+        approval: GrantApproval | None = None,
+        token: Token = Depends(require_token),
+    ):
+        """Approve a pending grant. Requires admin access."""
+        require_admin(token)
+        approval = approval or GrantApproval()
+        grant = grant_store.approve(
+            grant_id=grant_id,
+            scopes=approval.scopes,
+            lifetime_hours=approval.lifetime_hours,
+        )
+        if not grant:
+            raise HTTPException(status_code=400, detail="Grant not found or not pending")
+        return {
+            "grant_id": grant.grant_id,
+            "status": grant.status.value,
+            "scopes_approved": grant.scopes_approved,
+            "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
+        }
+
+    @app.post("/api/grants/{grant_id}/deny")
+    async def deny_grant(
+        grant_id: str,
+        denial: GrantDenial | None = None,
+        token: Token = Depends(require_token),
+    ):
+        """Deny a pending grant. Requires admin access."""
+        require_admin(token)
+        denial = denial or GrantDenial()
+        grant = grant_store.deny(grant_id=grant_id, reason=denial.reason)
+        if not grant:
+            raise HTTPException(status_code=400, detail="Grant not found or not pending")
+        return {
+            "grant_id": grant.grant_id,
+            "status": grant.status.value,
+            "denial_reason": grant.denial_reason,
+        }
+
+    @app.post("/api/grants/{grant_id}/revoke")
+    async def revoke_grant(
+        grant_id: str,
+        token: Token = Depends(require_token),
+    ):
+        """Revoke an approved grant. Requires admin access."""
+        require_admin(token)
+        grant = grant_store.revoke(grant_id=grant_id)
+        if not grant:
+            raise HTTPException(status_code=400, detail="Grant not found or not approved")
+        return {
+            "grant_id": grant.grant_id,
+            "status": grant.status.value,
+        }
+
+    class TokenClaimRequest(BaseModel):
+        claim_secret: str
+
+    @app.post("/api/grants/{grant_id}/token")
+    async def issue_grant_token(grant_id: str, request: TokenClaimRequest):
+        """
+        Issue a token for an approved grant.
+
+        Requires the claim_secret that was returned when the grant was created.
+        This ensures only the original requester can claim the token.
+        """
+        result = grant_store.issue_token(grant_id=grant_id, claim_secret=request.claim_secret)
+        if not result:
+            raise HTTPException(
+                status_code=400,
+                detail="Grant not approved, expired, or invalid claim secret"
+            )
+
+        token_string, grant = result
+        return {
+            "token": token_string,
+            "grant_id": grant.grant_id,
+            "scopes": grant.scopes_approved,
+            "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
+            "trust_tier": grant.trust_tier.value,
+        }
+
+    # Health check
+
+    @app.get("/health")
+    async def health():
+        """Health check endpoint."""
+        return {"status": "healthy"}
+
+    return app
+
+
+# Default app instance for uvicorn
+app = create_app()

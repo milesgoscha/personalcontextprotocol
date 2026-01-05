@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pcp": {
+      "command": "python3",
+      "args": ["/Users/milesgoscha/Developer/pcp/src/pcp/mcp/server.py"],
+      "cwd": "/Users/milesgoscha/Developer/pcp",
+      "env": {
+        "PYTHONPATH": "/Users/milesgoscha/Developer/pcp/src"
+      }
+    }
+  }
+}

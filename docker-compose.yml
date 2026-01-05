@@ -1,0 +1,53 @@
+# PCP Node - Docker Compose with Auto-SSL
+#
+# Quick start:
+#   1. Set your domain: export PCP_DOMAIN=pcp.yourdomain.com
+#   2. Run: docker compose up -d
+#
+# Caddy automatically provisions Let's Encrypt certificates.
+
+services:
+  pcp:
+    build: .
+    container_name: pcp-node
+    restart: unless-stopped
+    environment:
+      - PCP_DATA_DIR=/data
+      - PCP_PUBLIC_URL=https://${PCP_DOMAIN:-localhost}
+      - PCP_NODE_ID=pcp://${PCP_NODE_ID:-local}
+    volumes:
+      - pcp-data:/data
+    networks:
+      - pcp-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: pcp-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PCP_DOMAIN=${PCP_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - pcp-network
+    depends_on:
+      - pcp
+
+volumes:
+  pcp-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  pcp-network:
+    driver: bridge

@@ -1,0 +1,27 @@
+# PCP Node - Local Development (no SSL)
+#
+# Run: docker compose -f docker-compose.local.yml up -d
+#
+# Access at: http://localhost:6001
+
+services:
+  pcp:
+    build: .
+    container_name: pcp-node
+    restart: unless-stopped
+    ports:
+      - "6001:6001"
+    environment:
+      - PCP_DATA_DIR=/data
+      - PCP_PUBLIC_URL=http://localhost:6001
+      - PCP_NODE_ID=pcp://local
+    volumes:
+      - pcp-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pcp-data:

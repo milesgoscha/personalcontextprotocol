@@ -1,0 +1,21 @@
+# PCP Node Caddyfile
+#
+# Caddy automatically provisions and renews Let's Encrypt certificates.
+# Set PCP_DOMAIN environment variable to your domain.
+
+{$PCP_DOMAIN:localhost} {
+    reverse_proxy pcp:6001
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+}
