@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - PCP Hosted{% endblock %}
+
+{% block nav %}
+{% include "components/nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Settings</h1>
+        </div>
+    </header>
+    <main>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+            <!-- Account Info -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Account Information</h3>
+                    <div class="mt-5 border-t border-gray-200">
+                        <dl class="divide-y divide-gray-200">
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Username</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{ user.username }}</dd>
+                            </div>
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{ user.email }}</dd>
+                            </div>
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Node URL</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                    {% if node %}
+                                    <a href="{{ node.public_url }}" target="_blank" class="text-primary-600 hover:text-primary-500">
+                                        {{ node.public_url }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-gray-400">Not provisioned</span>
+                                    {% endif %}
+                                </dd>
+                            </div>
+                            <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                                <dt class="text-sm font-medium text-gray-500">Member since</dt>
+                                <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{ user.created_at.strftime('%B %d, %Y') }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Export -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Data Export</h3>
+                    <p class="mt-2 text-sm text-gray-500">Download all your context data as a JSONL file.</p>
+                    <div class="mt-5">
+                        <a href="/api/v1/node/export"
+                           class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                            <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Download Backup
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="bg-white shadow rounded-lg overflow-hidden border-2 border-red-200">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium leading-6 text-red-600">Danger Zone</h3>
+
+                    <!-- Delete Node -->
+                    <div class="mt-5 border-t border-gray-200 pt-5">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">Delete Node</h4>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Delete your PCP node and all associated data. This action cannot be undone.
+                                </p>
+                            </div>
+                            <button type="button"
+                                    x-data
+                                    @click="$dispatch('open-modal', 'delete-node')"
+                                    class="ml-4 inline-flex items-center rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                Delete Node
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Delete Account -->
+                    <div class="mt-5 border-t border-gray-200 pt-5">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">Delete Account</h4>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Permanently delete your account, node, and all data. This action cannot be undone.
+                                </p>
+                            </div>
+                            <button type="button"
+                                    x-data
+                                    @click="$dispatch('open-modal', 'delete-account')"
+                                    class="ml-4 inline-flex items-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                                Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Delete Node Modal -->
+<div x-data="{ open: false }"
+     @open-modal.window="if ($event.detail === 'delete-node') open = true"
+     @keydown.escape.window="open = false"
+     x-show="open"
+     x-cloak
+     class="relative z-50">
+    <div x-show="open" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div x-show="open"
+                 x-transition
+                 @click.away="open = false"
+                 class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                <form action="/api/v1/node" method="DELETE" hx-delete="/api/v1/node" hx-swap="none">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-base font-semibold leading-6 text-gray-900">Delete Node</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    This will permanently delete your PCP node and all its data. Enter your password to confirm.
+                                </p>
+                            </div>
+                            <div class="mt-4">
+                                <input type="password"
+                                       name="password"
+                                       required
+                                       placeholder="Enter your password"
+                                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                        <button type="submit"
+                                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto">
+                            Delete Node
+                        </button>
+                        <button type="button"
+                                @click="open = false"
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div x-data="{ open: false }"
+     @open-modal.window="if ($event.detail === 'delete-account') open = true"
+     @keydown.escape.window="open = false"
+     x-show="open"
+     x-cloak
+     class="relative z-50">
+    <div x-show="open" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div x-show="open"
+                 x-transition
+                 @click.away="open = false"
+                 class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                <form action="/api/v1/account" method="DELETE" hx-delete="/api/v1/account" hx-swap="none">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-base font-semibold leading-6 text-gray-900">Delete Account</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    This will permanently delete your account, your PCP node, and all data. This action cannot be undone.
+                                </p>
+                            </div>
+                            <div class="mt-4">
+                                <input type="password"
+                                       name="password"
+                                       required
+                                       placeholder="Enter your password"
+                                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                        <button type="submit"
+                                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto">
+                            Delete Everything
+                        </button>
+                        <button type="button"
+                                @click="open = false"
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

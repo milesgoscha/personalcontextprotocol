@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - PCP Hosted{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-2xl">
+        <!-- Progress indicator -->
+        <nav class="flex justify-center mb-8">
+            <ol class="flex items-center space-x-4">
+                <li class="flex items-center">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-white text-sm font-medium">1</span>
+                    <span class="ml-2 text-sm font-medium text-primary-600">Welcome</span>
+                </li>
+                <li class="flex items-center">
+                    <div class="h-0.5 w-12 bg-gray-300"></div>
+                </li>
+                <li class="flex items-center">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 text-gray-500 text-sm font-medium">2</span>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Your Node</span>
+                </li>
+                <li class="flex items-center">
+                    <div class="h-0.5 w-12 bg-gray-300"></div>
+                </li>
+                <li class="flex items-center">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 text-gray-500 text-sm font-medium">3</span>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Connect</span>
+                </li>
+            </ol>
+        </nav>
+
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-gray-900">Welcome to PCP, {{ user.username }}!</h1>
+                <p class="mt-4 text-lg text-gray-600">
+                    Your Personal Context Protocol node is being set up. Let's walk through what that means.
+                </p>
+            </div>
+
+            <div class="mt-10 space-y-8">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
+                            <svg class="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Your Context, Your Data</h3>
+                        <p class="mt-2 text-gray-600">
+                            PCP stores your personal context - preferences, history, and information that makes AI interactions more helpful. All data lives in your isolated node.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
+                            <svg class="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Permission-Based Access</h3>
+                        <p class="mt-2 text-gray-600">
+                            Applications must request permission before accessing your context. You control exactly who can read or write to your data.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100">
+                            <svg class="h-6 w-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Portable & Exportable</h3>
+                        <p class="mt-2 text-gray-600">
+                            Your data is always exportable. Download a backup anytime, or move to a self-hosted setup whenever you want.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-10">
+                <a href="/onboarding/2"
+                   class="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-3 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                    Continue
+                    <svg class="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

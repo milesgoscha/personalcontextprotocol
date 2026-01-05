@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PCP Hosted{% endblock %}
+
+{% block nav %}
+{% include "components/nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Dashboard</h1>
+        </div>
+    </header>
+    <main>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+            <!-- Node Status Card -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-medium leading-6 text-gray-900">Your PCP Node</h3>
+                            {% if node %}
+                            <p class="mt-1 text-sm text-gray-500">
+                                <a href="{{ node.public_url }}" target="_blank" class="text-primary-600 hover:text-primary-500">
+                                    {{ node.public_url }}
+                                </a>
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-4">
+                            {% if node %}
+                            <!-- Status Badge -->
+                            <span class="inline-flex items-center rounded-full px-3 py-0.5 text-sm font-medium
+                                {% if node.status == 'running' %}bg-green-100 text-green-800
+                                {% elif node.status == 'provisioning' %}bg-yellow-100 text-yellow-800
+                                {% elif node.status == 'pending' %}bg-gray-100 text-gray-800
+                                {% elif node.status == 'stopped' %}bg-gray-100 text-gray-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {% if node.status == 'provisioning' %}
+                                <svg class="animate-spin -ml-0.5 mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {% endif %}
+                                {{ node.status|title }}
+                            </span>
+
+                            <!-- Health Badge -->
+                            {% if node.status == 'running' %}
+                            <span class="inline-flex items-center rounded-full px-3 py-0.5 text-sm font-medium
+                                {% if node.health_status == 'healthy' %}bg-green-100 text-green-800
+                                {% elif node.health_status == 'unhealthy' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                <span class="mr-1.5 h-2 w-2 rounded-full
+                                    {% if node.health_status == 'healthy' %}bg-green-400
+                                    {% elif node.health_status == 'unhealthy' %}bg-red-400
+                                    {% else %}bg-gray-400{% endif %}"></span>
+                                {{ node.health_status|title }}
+                            </span>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if node and node.error_message %}
+                    <div class="mt-4 rounded-md bg-red-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Error</h3>
+                                <p class="mt-1 text-sm text-red-700">{{ node.error_message }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if node %}
+                    <!-- Node Actions -->
+                    <div class="mt-6 flex gap-3">
+                        {% if node.status == 'running' %}
+                        <form action="/api/v1/node/restart" method="POST" hx-post="/api/v1/node/restart" hx-swap="none">
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                Restart
+                            </button>
+                        </form>
+                        <form action="/api/v1/node/stop" method="POST" hx-post="/api/v1/node/stop" hx-swap="none">
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+                                </svg>
+                                Stop
+                            </button>
+                        </form>
+                        {% elif node.status == 'stopped' %}
+                        <form action="/api/v1/node/restart" method="POST" hx-post="/api/v1/node/restart" hx-swap="none">
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+                                </svg>
+                                Start
+                            </button>
+                        </form>
+                        {% elif node.status == 'error' %}
+                        <form action="/api/v1/node/provision" method="POST" hx-post="/api/v1/node/provision" hx-swap="none">
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                Retry Provisioning
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if node.status == 'running' %}
+                        <a href="/api/v1/node/export"
+                           class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                            <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            Export Data
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- No node yet -->
+                    <div class="mt-6 text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No node found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Your node should be provisioned automatically. Click below to start.</p>
+                        <div class="mt-6">
+                            <form action="/api/v1/node/provision" method="POST" hx-post="/api/v1/node/provision" hx-swap="none">
+                                <button type="submit"
+                                        class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                    <svg class="-ml-0.5 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Provision Node
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if node and node.status == 'running' %}
+            <!-- Quick Stats -->
+            <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Active Grants</dt>
+                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.active_grants or 0 }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3">
+                        <div class="text-sm">
+                            <a href="/dashboard/grants" class="font-medium text-primary-600 hover:text-primary-500">View all</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Pending Grants</dt>
+                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.pending_grants or 0 }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3">
+                        <div class="text-sm">
+                            <a href="/dashboard/grants?status=pending" class="font-medium text-primary-600 hover:text-primary-500">Review</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Node ID</dt>
+                                    <dd class="text-lg font-semibold text-gray-900 font-mono truncate">{{ node.node_id }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3">
+                        <div class="text-sm">
+                            <button onclick="navigator.clipboard.writeText('{{ node.node_id }}')" class="font-medium text-primary-600 hover:text-primary-500">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}

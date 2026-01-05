@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Grants - PCP Hosted{% endblock %}
+
+{% block nav %}
+{% include "components/nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">Access Grants</h1>
+            <p class="mt-2 text-sm text-gray-600">Manage which applications can access your context</p>
+        </div>
+    </header>
+    <main>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+            <!-- Filters -->
+            <div class="mb-6 flex gap-2">
+                <a href="/dashboard/grants"
+                   class="{% if not status_filter %}bg-primary-100 text-primary-700{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %} inline-flex items-center rounded-full px-4 py-2 text-sm font-medium">
+                    All
+                </a>
+                <a href="/dashboard/grants?status=pending"
+                   class="{% if status_filter == 'pending' %}bg-yellow-100 text-yellow-700{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %} inline-flex items-center rounded-full px-4 py-2 text-sm font-medium">
+                    Pending
+                </a>
+                <a href="/dashboard/grants?status=approved"
+                   class="{% if status_filter == 'approved' %}bg-green-100 text-green-700{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %} inline-flex items-center rounded-full px-4 py-2 text-sm font-medium">
+                    Approved
+                </a>
+                <a href="/dashboard/grants?status=denied"
+                   class="{% if status_filter == 'denied' %}bg-red-100 text-red-700{% else %}bg-white text-gray-700 hover:bg-gray-50{% endif %} inline-flex items-center rounded-full px-4 py-2 text-sm font-medium">
+                    Denied
+                </a>
+            </div>
+
+            <!-- Grants List -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                {% if grants %}
+                <ul role="list" class="divide-y divide-gray-200">
+                    {% for grant in grants %}
+                    <li class="p-4 sm:p-6" id="grant-{{ grant.id }}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-3">
+                                    <p class="text-sm font-medium text-gray-900 truncate">{{ grant.requester }}</p>
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                        {% if grant.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                        {% elif grant.status == 'approved' %}bg-green-100 text-green-800
+                                        {% elif grant.status == 'denied' %}bg-red-100 text-red-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ grant.status|title }}
+                                    </span>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    {% for scope in grant.scopes %}
+                                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
+                                        {{ scope }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    Requested {{ grant.requested_at }}
+                                    {% if grant.resolved_at %}
+                                    &middot; Resolved {{ grant.resolved_at }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="ml-4 flex-shrink-0 flex gap-2">
+                                {% if grant.status == 'pending' %}
+                                <button hx-post="/api/v1/node/grants/{{ grant.id }}/approve"
+                                        hx-target="#grant-{{ grant.id }}"
+                                        hx-swap="outerHTML"
+                                        class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+                                    Approve
+                                </button>
+                                <button hx-post="/api/v1/node/grants/{{ grant.id }}/deny"
+                                        hx-target="#grant-{{ grant.id }}"
+                                        hx-swap="outerHTML"
+                                        class="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500">
+                                    Deny
+                                </button>
+                                {% elif grant.status == 'approved' %}
+                                <button hx-post="/api/v1/node/grants/{{ grant.id }}/revoke"
+                                        hx-target="#grant-{{ grant.id }}"
+                                        hx-swap="outerHTML"
+                                        hx-confirm="Are you sure you want to revoke this grant?"
+                                        class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                                    Revoke
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No grants</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        {% if status_filter %}
+                        No {{ status_filter }} grants found.
+                        {% else %}
+                        No applications have requested access yet.
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

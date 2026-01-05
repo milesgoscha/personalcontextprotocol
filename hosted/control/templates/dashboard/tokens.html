@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Tokens - PCP Hosted{% endblock %}
+
+{% block nav %}
+{% include "components/nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="py-10">
+    <header>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">API Tokens</h1>
+            <p class="mt-2 text-sm text-gray-600">Create tokens for programmatic access to your node</p>
+        </div>
+    </header>
+    <main>
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+            <!-- Create Token Form -->
+            <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Create New Token</h3>
+                    <form class="mt-5 space-y-4"
+                          hx-post="/api/v1/node/token"
+                          hx-target="#token-result"
+                          hx-swap="innerHTML"
+                          x-data="{ scopes: ['read'] }">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="subject" class="block text-sm font-medium text-gray-700">Token Name</label>
+                                <input type="text"
+                                       name="subject"
+                                       id="subject"
+                                       required
+                                       placeholder="e.g., my-app-token"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="hours" class="block text-sm font-medium text-gray-700">Validity</label>
+                                <select name="hours"
+                                        id="hours"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                                    <option value="24">24 hours</option>
+                                    <option value="168">7 days</option>
+                                    <option value="720">30 days</option>
+                                    <option value="2160">90 days</option>
+                                    <option value="8760">1 year</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Scopes</label>
+                            <div class="mt-2 flex flex-wrap gap-3">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="read" checked
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">read</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="write"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">write</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="admin"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">admin</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                                <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Create Token
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Token Result -->
+                    <div id="token-result" class="mt-4"></div>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            Tokens are created directly on your PCP node. Make sure to copy the token immediately - it won't be shown again.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -39,26 +39,20 @@ def create_app() -> FastAPI:
         debug=settings.debug,
     )
 
-    # Register routes
-    from .routes import auth_router, nodes_router, proxy_router
+    # Register API routes
+    from .routes import auth_router, nodes_router, proxy_router, dashboard_router
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(nodes_router, prefix="/api/v1/node", tags=["nodes"])
     app.include_router(proxy_router, prefix="/api/v1/node", tags=["proxy"])
 
+    # Register dashboard routes (HTML pages)
+    app.include_router(dashboard_router, tags=["dashboard"])
+
     @app.get("/health")
     async def health():
         """Health check endpoint."""
         return {"status": "healthy", "service": "pcp-hosted-control-plane"}
-
-    @app.get("/")
-    async def root():
-        """Root endpoint - will redirect to dashboard or landing page."""
-        return {
-            "name": "PCP Hosted Service",
-            "version": "0.3.0",
-            "docs": "/docs",
-        }
 
     return app
 
