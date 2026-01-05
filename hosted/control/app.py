@@ -39,12 +39,10 @@ def create_app() -> FastAPI:
         debug=settings.debug,
     )
 
-    # Register routes (will be added in Phase 2)
-    # from .routes import auth, dashboard, nodes, proxy
-    # app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-    # app.include_router(nodes.router, prefix="/api/v1/node", tags=["nodes"])
-    # app.include_router(proxy.router, prefix="/api/v1/node", tags=["proxy"])
-    # app.include_router(dashboard.router, tags=["dashboard"])
+    # Register routes
+    from .routes import auth_router
+
+    app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
     @app.get("/health")
     async def health():
