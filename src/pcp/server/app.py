@@ -174,8 +174,16 @@ def create_app(
             },
             "mcp": {
                 "available": True,
-                "transport": "stdio",
-                "command": "python3 -m pcp.mcp.server",
+                "transports": {
+                    "sse": {
+                        "endpoint": f"{_public_url}/mcp",
+                        "auth": "bearer",
+                    },
+                    "stdio": {
+                        "command": "pcp-mcp",
+                        "note": "Requires PCP_NODE_URL and PCP_TOKEN env vars",
+                    },
+                },
             },
         }
 
@@ -483,6 +491,25 @@ def create_app(
     async def health():
         """Health check endpoint."""
         return {"status": "healthy"}
+
+    # Mount MCP HTTP endpoint
+    from contextlib import asynccontextmanager
+    from pcp.mcp.sse import create_mcp_sse_app
+
+    mcp_app, mcp_lifespan = create_mcp_sse_app(ops)
+
+    # Create a composed lifespan that initializes MCP's session manager
+    @asynccontextmanager
+    async def lifespan(app):
+        # Run MCP's lifespan context to initialize session manager
+        async with mcp_lifespan(app):
+            yield
+
+    # Update the app's lifespan
+    app.router.lifespan_context = lifespan
+
+    # Mount the MCP app
+    app.mount("/mcp", mcp_app)
 
     return app
 

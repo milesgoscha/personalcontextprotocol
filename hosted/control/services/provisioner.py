@@ -63,14 +63,23 @@ class Provisioner:
         """Generate Traefik labels for routing.
 
         Creates labels for:
-        - HTTP to HTTPS redirect
-        - HTTPS routing with TLS
-        - Wildcard subdomain matching
+        - Dev mode: HTTP only routing
+        - Prod mode: HTTP to HTTPS redirect + TLS
         """
         settings = get_settings()
         domain = settings.pcp_domain
         router_name = f"pcp-{username}"
 
+        # Dev mode: HTTP only (domains ending in .localhost)
+        if domain.endswith(".localhost"):
+            return {
+                "traefik.enable": "true",
+                f"traefik.http.routers.{router_name}.rule": f"Host(`{username}.{domain}`)",
+                f"traefik.http.routers.{router_name}.entrypoints": "web",
+                f"traefik.http.services.{router_name}.loadbalancer.server.port": "6001",
+            }
+
+        # Production mode: HTTPS with redirect
         return {
             # Enable Traefik
             "traefik.enable": "true",
@@ -84,7 +93,7 @@ class Provisioner:
             f"traefik.http.routers.{router_name}.tls": "true",
             f"traefik.http.routers.{router_name}.tls.certresolver": "letsencrypt",
             # Service port
-            f"traefik.http.services.{router_name}.loadbalancer.server.port": "9315",
+            f"traefik.http.services.{router_name}.loadbalancer.server.port": "6001",
         }
 
     async def create_volume(self, username: str) -> str:
@@ -147,7 +156,7 @@ class Provisioner:
             try:
                 existing = self.client.containers.get(container_name)
                 if existing.status == "running":
-                    internal_url = f"http://{container_name}:9315"
+                    internal_url = f"http://{container_name}:6001"
                     return existing.id, internal_url
                 # Remove stopped container
                 existing.remove(force=True)
@@ -180,7 +189,7 @@ class Provisioner:
                 cpu_quota=50000,  # 0.5 CPU
             )
 
-            internal_url = f"http://{container_name}:9315"
+            internal_url = f"http://{container_name}:6001"
             return container.id, internal_url
 
         except APIError as e:

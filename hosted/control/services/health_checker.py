@@ -106,7 +106,7 @@ class HealthChecker:
             return
 
         username = node.container_name.replace("pcp-", "")
-        internal_url = f"http://{node.container_name}:9315"
+        internal_url = f"http://{node.container_name}:6001"
 
         try:
             async with NodeClient(internal_url, timeout=self.timeout) as client:

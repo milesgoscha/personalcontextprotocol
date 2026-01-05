@@ -324,7 +324,7 @@ async def dashboard_home(
                 user.id,
                 node.admin_token_version,
             )
-            internal_url = f"http://pcp-{user.username}:9315"
+            internal_url = f"http://pcp-{user.username}:6001"
             async with NodeClient(internal_url, admin_token) as client:
                 grants = await client.get_grants()
                 stats["active_grants"] = len([g for g in grants if g.get("status") == "approved"])
@@ -366,7 +366,7 @@ async def dashboard_grants(
                 user.id,
                 node.admin_token_version,
             )
-            internal_url = f"http://pcp-{user.username}:9315"
+            internal_url = f"http://pcp-{user.username}:6001"
             async with NodeClient(internal_url, admin_token) as client:
                 all_grants = await client.get_grants()
                 if status_filter:
@@ -431,7 +431,7 @@ async def dashboard_audit(
                 user.id,
                 node.admin_token_version,
             )
-            internal_url = f"http://pcp-{user.username}:9315"
+            internal_url = f"http://pcp-{user.username}:6001"
             async with NodeClient(internal_url, admin_token) as client:
                 entries = await client.get_audit_log(limit=limit, offset=offset)
         except (DecryptionError, NodeClientError):

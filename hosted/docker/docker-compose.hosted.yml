@@ -3,8 +3,9 @@
 
 services:
   # Traefik reverse proxy
+  # Note: v3.6+ required for Docker 29+ API compatibility
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     container_name: pcp-traefik
     restart: unless-stopped
     ports:

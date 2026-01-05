@@ -13,8 +13,9 @@
 
 services:
   # Traefik reverse proxy (dev mode - no TLS)
+  # Note: v3.6+ required for Docker 29+ API compatibility
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     container_name: pcp-traefik
     restart: unless-stopped
     ports:
@@ -70,11 +71,14 @@ services:
       dockerfile: docker/Dockerfile.control
     container_name: pcp-control-plane
     restart: unless-stopped
+    user: root  # Required for Docker socket access in dev
     depends_on:
       postgres:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+    ports:
+      - "8000:8000"  # Direct access for local dev
     environment:
       # Database
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pcp}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-pcp_hosted}

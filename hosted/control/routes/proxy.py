@@ -6,8 +6,8 @@ Used by the dashboard to manage grants, tokens, and view audit logs.
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -112,7 +112,7 @@ async def _get_node_client(
 
 def _get_internal_url(username: str) -> str:
     """Get the internal Docker network URL for a user's node."""
-    return f"http://pcp-{username}:9315"
+    return f"http://pcp-{username}:6001"
 
 
 # --- Grant Routes ---
@@ -239,33 +239,54 @@ async def revoke_grant(
 # --- Token Routes ---
 
 
-@router.post("/token", response_model=CreateTokenResponse)
+@router.post("/token", response_class=HTMLResponse)
 async def create_token(
-    request: CreateTokenRequest,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> CreateTokenResponse:
-    """Create a new token for the user's node."""
+    subject: str = Form(...),
+    hours: int = Form(24),
+    scopes: list[str] = Form(default=["query:event.*"]),
+) -> HTMLResponse:
+    """Create a new token for the user's node.
+
+    Accepts form data and returns HTML for HTMX integration.
+    """
     node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
     internal_url = _get_internal_url(current_user.username)
 
     try:
         async with NodeClient(internal_url, admin_token) as client:
             token = await client.create_token(
-                subject=request.subject,
-                scopes=request.scopes,
-                hours=request.hours,
+                subject=subject,
+                scopes=scopes,
+                hours=hours,
             )
-            return CreateTokenResponse(token=token)
+            # Return HTML snippet for HTMX to insert
+            return HTMLResponse(
+                content=f'''
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-green-800 mb-2">Token Created Successfully</h4>
+                    <p class="text-xs text-green-600 mb-2">Copy this token now - it won't be shown again!</p>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 text-xs bg-white p-2 rounded border border-green-300 break-all select-all">{token}</code>
+                        <button type="button"
+                                onclick="navigator.clipboard.writeText('{token}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)"
+                                class="px-3 py-1 text-xs font-medium text-green-700 bg-white border border-green-300 rounded hover:bg-green-50">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+                '''
+            )
     except NodeAuthError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Admin token expired or invalid",
+        return HTMLResponse(
+            content='<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Admin token expired or invalid. Please try logging out and back in.</div>',
+            status_code=401,
         )
     except NodeClientError as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(e),
+        return HTMLResponse(
+            content=f'<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Failed to create token: {e}</div>',
+            status_code=502,
         )
 
 

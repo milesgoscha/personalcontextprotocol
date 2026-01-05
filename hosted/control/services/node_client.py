@@ -43,7 +43,7 @@ class NodeClient:
         """Initialize the node client.
 
         Args:
-            base_url: The node's base URL (e.g., http://pcp-alice:9315)
+            base_url: The node's base URL (e.g., http://pcp-alice:6001)
             admin_token: Optional admin token for authenticated requests.
             timeout: Request timeout in seconds.
         """
@@ -137,7 +137,8 @@ class NodeClient:
         try:
             response = await self.client.get("/api/grants")
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return data.get("grants", [])
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
                 raise NodeAuthError("Admin token invalid or expired")

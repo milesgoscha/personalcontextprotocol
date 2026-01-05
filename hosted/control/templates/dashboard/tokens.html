@@ -51,21 +51,37 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Scopes</label>
-                            <div class="mt-2 flex flex-wrap gap-3">
+                            <p class="text-xs text-gray-500 mt-1">Select permissions for this token</p>
+                            <div class="mt-2 space-y-2">
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" name="scopes" value="read" checked
+                                    <input type="checkbox" name="scopes" value="query:event.*" checked
                                            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                                    <span class="ml-2 text-sm text-gray-700">read</span>
+                                    <span class="ml-2 text-sm text-gray-700">query:event.* <span class="text-gray-400">(read events)</span></span>
                                 </label>
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" name="scopes" value="write"
+                                    <input type="checkbox" name="scopes" value="query:learning.*"
                                            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                                    <span class="ml-2 text-sm text-gray-700">write</span>
+                                    <span class="ml-2 text-sm text-gray-700">query:learning.* <span class="text-gray-400">(read learnings)</span></span>
                                 </label>
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" name="scopes" value="admin"
+                                    <input type="checkbox" name="scopes" value="query:identity"
                                            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-                                    <span class="ml-2 text-sm text-gray-700">admin</span>
+                                    <span class="ml-2 text-sm text-gray-700">query:identity <span class="text-gray-400">(read identity)</span></span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="observe:event"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">observe:event <span class="text-gray-400">(write events)</span></span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="learn:write"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">learn:write <span class="text-gray-400">(write learnings)</span></span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="scopes" value="pcp:admin"
+                                           class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                    <span class="ml-2 text-sm text-gray-700">pcp:admin <span class="text-gray-400">(full access)</span></span>
                                 </label>
                             </div>
                         </div>

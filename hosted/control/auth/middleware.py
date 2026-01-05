@@ -6,7 +6,7 @@ the current user from JWT tokens.
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,17 +18,23 @@ from .jwt import decode_token, TokenError
 # HTTP Bearer scheme for Authorization header
 _bearer_scheme = HTTPBearer(auto_error=False)
 
+# Cookie name for access token (shared with dashboard.py)
+ACCESS_TOKEN_COOKIE = "pcp_access_token"
+
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     """Get the current authenticated user.
 
-    This dependency requires a valid access token in the Authorization header.
-    Use this for routes that require authentication.
+    This dependency accepts authentication via:
+    1. Authorization header with Bearer token
+    2. Cookie with access token (for dashboard HTMX requests)
 
     Args:
+        request: The FastAPI request object (for cookie access).
         credentials: The Bearer token from the Authorization header.
         db: Database session.
 
@@ -38,7 +44,15 @@ async def get_current_user(
     Raises:
         HTTPException: 401 if no token, invalid token, or user not found.
     """
-    if credentials is None:
+    # Try Bearer token first
+    access_token = None
+    if credentials is not None:
+        access_token = credentials.credentials
+    else:
+        # Fall back to cookie
+        access_token = request.cookies.get(ACCESS_TOKEN_COOKIE)
+
+    if access_token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -46,7 +60,7 @@ async def get_current_user(
         )
 
     try:
-        token_data = decode_token(credentials.credentials, expected_type="access")
+        token_data = decode_token(access_token, expected_type="access")
     except TokenError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -69,26 +83,37 @@ async def get_current_user(
 
 
 async def get_current_user_optional(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User | None:
     """Get the current user if authenticated, None otherwise.
 
-    This dependency does not require authentication. Use this for routes
-    that have different behavior for authenticated vs anonymous users.
+    This dependency accepts authentication via:
+    1. Authorization header with Bearer token
+    2. Cookie with access token (for dashboard HTMX requests)
 
     Args:
+        request: The FastAPI request object (for cookie access).
         credentials: The Bearer token from the Authorization header.
         db: Database session.
 
     Returns:
         The authenticated User object, or None if not authenticated.
     """
-    if credentials is None:
+    # Try Bearer token first
+    access_token = None
+    if credentials is not None:
+        access_token = credentials.credentials
+    else:
+        # Fall back to cookie
+        access_token = request.cookies.get(ACCESS_TOKEN_COOKIE)
+
+    if access_token is None:
         return None
 
     try:
-        token_data = decode_token(credentials.credentials, expected_type="access")
+        token_data = decode_token(access_token, expected_type="access")
     except TokenError:
         return None
 

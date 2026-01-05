@@ -29,6 +29,7 @@ dev = [
 
 [project.scripts]
 pcp = "pcp.cli:main"
+pcp-mcp = "pcp.mcp.remote:main"
 
 [build-system]
 requires = ["hatchling"]
