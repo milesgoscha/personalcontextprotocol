@@ -2,6 +2,45 @@
 
 This directory contains Docker configurations for deploying the PCP Hosted Service.
 
+## Local Development (Quick Start)
+
+Test the hosted service locally without a domain or TLS:
+
+```bash
+# 1. Build the PCP node image (from repo root)
+cd /path/to/pcp
+docker build -t pcp:latest .
+
+# 2. Set up dev environment
+cd hosted/docker
+cp .env.dev.example .env
+
+# 3. Start services
+docker compose -f docker-compose.dev.yml up -d
+
+# 4. Run migrations
+docker compose -f docker-compose.dev.yml run --rm migrations
+
+# 5. Access the service
+open http://pcp.localhost
+```
+
+**Local URLs:**
+- Control plane: http://pcp.localhost
+- User nodes: http://{username}.pcp.localhost
+- Traefik dashboard: http://localhost:8080
+- PostgreSQL: localhost:5432
+
+**Note:** Modern browsers handle `*.localhost` wildcards automatically. If you have issues, add to `/etc/hosts`:
+```
+127.0.0.1 pcp.localhost
+127.0.0.1 alice.pcp.localhost
+```
+
+---
+
+## Production Deployment
+
 ## Prerequisites
 
 - Docker and Docker Compose v2+

@@ -1,0 +1,113 @@
+# Docker Compose for LOCAL DEVELOPMENT
+# No TLS, uses *.localhost for wildcard routing
+#
+# Usage:
+#   cp .env.dev.example .env
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml run --rm migrations
+#
+# Access:
+#   Control plane: http://pcp.localhost
+#   User nodes:    http://{username}.pcp.localhost
+#   Traefik UI:    http://localhost:8080
+
+version: "3.8"
+
+services:
+  # Traefik reverse proxy (dev mode - no TLS)
+  traefik:
+    image: traefik:v3.0
+    container_name: pcp-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.dev.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - pcp-network
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: pcp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pcp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-pcp_hosted}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # Expose for local debugging
+    networks:
+      - pcp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pcp} -d ${POSTGRES_DB:-pcp_hosted}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Control Plane
+  control-plane:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.control
+    container_name: pcp-control-plane
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pcp}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-pcp_hosted}
+
+      # Auth (use fixed dev values)
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production-please}
+      MASTER_ENCRYPTION_KEY: ${MASTER_ENCRYPTION_KEY:-dev-encryption-key-32-bytes-ok}
+
+      # Domain - uses .localhost for wildcard
+      PCP_DOMAIN: ${PCP_DOMAIN:-pcp.localhost}
+      PCP_IMAGE: ${PCP_IMAGE:-pcp:latest}
+
+      # Docker socket for container management
+      DOCKER_HOST: unix:///var/run/docker.sock
+
+      # Server settings
+      PCP_HOST: "0.0.0.0"
+      PCP_PORT: "8000"
+      DEBUG: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - pcp-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.control-plane.rule=Host(`${PCP_DOMAIN:-pcp.localhost}`)"
+      - "traefik.http.routers.control-plane.entrypoints=web"
+      - "traefik.http.services.control-plane.loadbalancer.server.port=8000"
+
+  # Run migrations
+  migrations:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.control
+    container_name: pcp-migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pcp}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-pcp_hosted}
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - pcp-network
+    restart: "no"
+
+networks:
+  pcp-network:
+    name: pcp-network
+    driver: bridge
+
+volumes:
+  postgres-data:

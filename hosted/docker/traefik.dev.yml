@@ -1,0 +1,27 @@
+# Traefik configuration for local development
+# No TLS, dashboard enabled, simpler setup
+
+api:
+  dashboard: true
+  insecure: true  # Dashboard at http://localhost:8080
+
+# Entry points - HTTP only for local dev
+entryPoints:
+  web:
+    address: ":80"
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: pcp-network
+    watch: true
+
+# Logging
+log:
+  level: DEBUG
+  format: common
+
+accessLog:
+  format: common
