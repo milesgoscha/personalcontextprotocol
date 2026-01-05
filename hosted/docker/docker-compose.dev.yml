@@ -11,8 +11,6 @@
 #   User nodes:    http://{username}.pcp.localhost
 #   Traefik UI:    http://localhost:8080
 
-version: "3.8"
-
 services:
   # Traefik reverse proxy (dev mode - no TLS)
   traefik:

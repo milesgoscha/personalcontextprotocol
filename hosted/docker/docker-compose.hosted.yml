@@ -1,8 +1,6 @@
 # Docker Compose for PCP Hosted Service
 # Includes: Traefik (reverse proxy), Control Plane, PostgreSQL
 
-version: "3.8"
-
 services:
   # Traefik reverse proxy
   traefik:
