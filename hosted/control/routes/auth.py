@@ -27,7 +27,8 @@ from ..auth.middleware import CurrentUser
 from ..auth.password import hash_password, verify_password
 from ..config import get_settings
 from ..database import get_db
-from ..models import User, Session, AuditLog
+from ..models import User, Session, AuditLog, Node
+from ..services.provisioner import get_provisioner, ProvisioningError
 
 router = APIRouter()
 
@@ -354,3 +355,74 @@ async def get_me(current_user: CurrentUser) -> UserResponse:
         email_verified=current_user.email_verified,
         created_at=current_user.created_at,
     )
+
+
+class DeleteAccountRequest(BaseModel):
+    """Request body for account deletion."""
+
+    password: str
+
+
+@router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+    request: DeleteAccountRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    """Permanently delete the user's account and all data.
+
+    This action:
+    1. Verifies password
+    2. Stops and removes the user's PCP node container
+    3. Deletes the user's data volume
+    4. Deletes all database records (sessions, node, audit logs, user)
+
+    This action is irreversible.
+    """
+    # Verify password
+    if not verify_password(request.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid password",
+        )
+
+    # Get the user's node
+    result = await db.execute(select(Node).where(Node.user_id == current_user.id))
+    node = result.scalar_one_or_none()
+
+    # Clean up Docker resources if node exists
+    if node:
+        try:
+            provisioner = get_provisioner()
+            await provisioner.cleanup_user(current_user.username)
+        except ProvisioningError as e:
+            # Log but continue - we still want to delete the account
+            await _log_audit(
+                db,
+                current_user.id,
+                "account_delete_warning",
+                f"Failed to clean up Docker resources: {e}",
+            )
+
+        # Delete the node record
+        await db.delete(node)
+
+    # Delete all sessions (revokes all tokens)
+    await db.execute(delete(Session).where(Session.user_id == current_user.id))
+
+    # Delete audit logs for this user
+    await db.execute(delete(AuditLog).where(AuditLog.user_id == current_user.id))
+
+    # Log the deletion (with user_id=None since user will be deleted)
+    final_log = AuditLog(
+        id=str(uuid4()),
+        user_id=None,
+        action="account_deleted",
+        details=f"User {current_user.username} ({current_user.email}) deleted their account",
+    )
+    db.add(final_log)
+
+    # Delete the user
+    await db.delete(current_user)
+
+    await db.commit()
