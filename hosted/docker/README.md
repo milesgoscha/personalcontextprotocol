@@ -15,13 +15,10 @@ docker build -t pcp:latest .
 cd hosted/docker
 cp .env.dev.example .env
 
-# 3. Start services
+# 3. Start services (migrations run automatically before control plane)
 docker compose -f docker-compose.dev.yml up -d
 
-# 4. Run migrations
-docker compose -f docker-compose.dev.yml run --rm migrations
-
-# 5. Access the service
+# 4. Access the service
 open http://pcp.localhost
 ```
 
