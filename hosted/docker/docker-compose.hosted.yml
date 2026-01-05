@@ -90,8 +90,9 @@ services:
       - "traefik.http.routers.control-plane.tls.certresolver=letsencrypt"
       - "traefik.http.services.control-plane.loadbalancer.server.port=8000"
 
-  # Run migrations on startup (one-time job)
+  # Run migrations (only via: docker compose run --rm migrations)
   migrations:
+    profiles: ["tools"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.control
@@ -104,7 +105,6 @@ services:
     command: ["alembic", "upgrade", "head"]
     networks:
       - pcp-network
-    restart: "no"
 
 networks:
   pcp-network:
