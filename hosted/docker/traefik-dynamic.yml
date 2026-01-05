@@ -1,0 +1,67 @@
+# Traefik dynamic configuration
+# This file contains middleware and routing rules
+
+http:
+  # Middlewares
+  middlewares:
+    # Redirect HTTP to HTTPS
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # Security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"
+
+    # Rate limiting for auth endpoints
+    rate-limit-auth:
+      rateLimit:
+        average: 10
+        burst: 20
+        period: 1m
+
+    # Strip sensitive headers before proxying to nodes
+    strip-sensitive-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Host: ""
+          X-Real-IP: ""
+
+  # Routers for the control plane
+  routers:
+    # Main control plane dashboard
+    control-plane:
+      rule: "Host(`{{ env \"PCP_DOMAIN\" }}`)"
+      service: control-plane
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+
+    # API routes with rate limiting
+    control-plane-api:
+      rule: "Host(`{{ env \"PCP_DOMAIN\" }}`) && PathPrefix(`/api/`)"
+      service: control-plane
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - rate-limit-auth
+
+  # Services
+  services:
+    control-plane:
+      loadBalancer:
+        servers:
+          - url: "http://control-plane:8000"

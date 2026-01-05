@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from .config import get_settings
 from .database import close_db
+from .services import start_health_checker, stop_health_checker
 
 
 @asynccontextmanager
@@ -20,9 +21,14 @@ async def lifespan(app: FastAPI):
     print(f"Starting PCP Hosted Control Plane on {settings.host}:{settings.port}")
     print(f"Domain: {settings.pcp_domain}")
 
+    # Start background services
+    await start_health_checker()
+    print("Health checker started")
+
     yield
 
     # Shutdown
+    await stop_health_checker()
     await close_db()
     print("Control plane shutdown complete")
 

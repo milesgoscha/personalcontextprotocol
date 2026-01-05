@@ -1,12 +1,16 @@
 """Services for PCP Hosted Control Plane."""
 
 from .encryption import encrypt_token, decrypt_token
-from .provisioner import Provisioner
+from .health_checker import HealthChecker, start_health_checker, stop_health_checker
 from .node_client import NodeClient
+from .provisioner import Provisioner
 
 __all__ = [
     "encrypt_token",
     "decrypt_token",
-    "Provisioner",
+    "HealthChecker",
+    "start_health_checker",
+    "stop_health_checker",
     "NodeClient",
+    "Provisioner",
 ]
