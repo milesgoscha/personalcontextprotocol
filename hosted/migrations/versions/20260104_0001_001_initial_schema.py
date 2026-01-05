@@ -18,11 +18,24 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+# Define enum types at module level for reuse
+nodestatus_enum = postgresql.ENUM(
+    'pending', 'provisioning', 'running', 'stopped', 'error',
+    name='nodestatus',
+    create_type=False  # We'll create explicitly with checkfirst
+)
+healthstatus_enum = postgresql.ENUM(
+    'healthy', 'unhealthy', 'unknown',
+    name='healthstatus',
+    create_type=False
+)
+
 
 def upgrade() -> None:
-    # Create enum types (IF NOT EXISTS for idempotency)
-    op.execute("DO $$ BEGIN CREATE TYPE nodestatus AS ENUM ('pending', 'provisioning', 'running', 'stopped', 'error'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
-    op.execute("DO $$ BEGIN CREATE TYPE healthstatus AS ENUM ('healthy', 'unhealthy', 'unknown'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    # Create enum types with checkfirst=True (idempotent)
+    bind = op.get_bind()
+    nodestatus_enum.create(bind, checkfirst=True)
+    healthstatus_enum.create(bind, checkfirst=True)
 
     # Create users table
     op.create_table(
@@ -57,23 +70,13 @@ def upgrade() -> None:
         sa.Column("container_id", sa.String(64), nullable=True),
         sa.Column("container_name", sa.String(255), nullable=True),
         sa.Column("volume_name", sa.String(255), nullable=True),
-        sa.Column(
-            "status",
-            sa.Enum("pending", "provisioning", "running", "stopped", "error", name="nodestatus", create_type=False),
-            nullable=False,
-            server_default="pending",
-        ),
+        sa.Column("status", nodestatus_enum, nullable=False, server_default="pending"),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("admin_token_encrypted", sa.LargeBinary(), nullable=True),
         sa.Column("admin_token_version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("public_url", sa.String(255), nullable=True),
         sa.Column("node_id", sa.String(255), nullable=True),
-        sa.Column(
-            "health_status",
-            sa.Enum("healthy", "unhealthy", "unknown", name="healthstatus", create_type=False),
-            nullable=False,
-            server_default="unknown",
-        ),
+        sa.Column("health_status", healthstatus_enum, nullable=False, server_default="unknown"),
         sa.Column("last_health_check", sa.DateTime(timezone=True), nullable=True),
         sa.Column("consecutive_failures", sa.Integer(), nullable=False, server_default="0"),
         sa.Column(
