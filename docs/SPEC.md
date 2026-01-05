@@ -1051,29 +1051,31 @@ The control plane holds admin tokens for each user's node. This is the highest-v
 ### v0.3 Deliverables
 
 **Control Plane (P0):**
-- [ ] User auth: email/password signup, JWT sessions
-- [ ] Node provisioning: Docker API, per-user volume, env injection
-- [ ] Traefik routing: wildcard subdomain + automatic TLS
-- [ ] Admin token storage: encrypted in DB, rotation support
-- [ ] Health monitoring: detect and restart unhealthy nodes
+- [x] User auth: email/password signup, JWT sessions (`hosted/control/auth/`, `routes/auth.py`)
+- [x] Node provisioning: Docker API, per-user volume, env injection (`services/provisioner.py`)
+- [x] Traefik routing: wildcard subdomain + automatic TLS (`docker/traefik.yml`, `docker-compose.hosted.yml`)
+- [x] Admin token storage: encrypted in DB, rotation support (`services/encryption.py`, key versioning)
+- [x] Health monitoring: detect and restart unhealthy nodes (`services/health_checker.py`)
 
 **Dashboard (P0):**
-- [ ] Onboarding wizard: identity setup, agent connection guide
-- [ ] Grant management: list, approve, deny, revoke (calls user's node)
-- [ ] Audit log viewer: paginated access history
-- [ ] Token management: issue local tokens, rotate admin token
-- [ ] Settings: change password, delete account
+- [x] Onboarding wizard: identity setup, agent connection guide (`templates/onboarding/step1-3.html`)
+- [x] Grant management: list, approve, deny, revoke (calls user's node) (`templates/dashboard/grants.html`, `routes/proxy.py`)
+- [x] Audit log viewer: paginated access history (`templates/dashboard/audit.html`)
+- [x] Token management: issue local tokens (`templates/dashboard/tokens.html`)
+- [x] Settings: change password, delete account (`templates/dashboard/settings.html`, `routes/auth.py`)
 
 **Data Portability (P1):**
-- [ ] Full data export: download all objects as JSONL
-- [ ] Account deletion: purge container, volume, and DB records
-- [ ] Migration guide: export from hosted, import to self-hosted
+- [x] Full data export: download all objects as JSONL (`routes/proxy.py` → `/api/v1/node/export`)
+- [x] Account deletion: purge container, volume, and DB records (`routes/auth.py` → `DELETE /api/v1/auth/account`)
+- [ ] Migration guide: export from hosted, import to self-hosted (documentation TODO)
 
 **Deferred (P2):**
 - [ ] Billing: Stripe integration, usage-based or flat-rate
 - [ ] DID support: `did:web` generation, resolution endpoint
 - [ ] Multi-region: deploy nodes in user's preferred region
 - [ ] Agent registry: verified third-party agent directory
+
+**Status:** v0.3 core complete. Control plane, dashboard, and data portability implemented. Migration guide and P2 items deferred.
 
 ### Technical Decisions
 
