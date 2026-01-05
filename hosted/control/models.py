@@ -97,7 +97,7 @@ class Node(Base):
 
     # Status
     status: Mapped[NodeStatus] = mapped_column(
-        Enum(NodeStatus), default=NodeStatus.PENDING
+        Enum(NodeStatus, create_type=False), default=NodeStatus.PENDING
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -117,7 +117,7 @@ class Node(Base):
 
     # Health
     health_status: Mapped[HealthStatus] = mapped_column(
-        Enum(HealthStatus), default=HealthStatus.UNKNOWN
+        Enum(HealthStatus, create_type=False), default=HealthStatus.UNKNOWN
     )
     last_health_check: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

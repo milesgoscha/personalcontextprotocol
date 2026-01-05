@@ -20,9 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create enum types
-    op.execute("CREATE TYPE nodestatus AS ENUM ('pending', 'provisioning', 'running', 'stopped', 'error')")
-    op.execute("CREATE TYPE healthstatus AS ENUM ('healthy', 'unhealthy', 'unknown')")
+    # Create enum types (IF NOT EXISTS for idempotency)
+    op.execute("DO $$ BEGIN CREATE TYPE nodestatus AS ENUM ('pending', 'provisioning', 'running', 'stopped', 'error'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE healthstatus AS ENUM ('healthy', 'unhealthy', 'unknown'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
 
     # Create users table
     op.create_table(
@@ -59,7 +59,7 @@ def upgrade() -> None:
         sa.Column("volume_name", sa.String(255), nullable=True),
         sa.Column(
             "status",
-            sa.Enum("pending", "provisioning", "running", "stopped", "error", name="nodestatus"),
+            sa.Enum("pending", "provisioning", "running", "stopped", "error", name="nodestatus", create_type=False),
             nullable=False,
             server_default="pending",
         ),
@@ -70,7 +70,7 @@ def upgrade() -> None:
         sa.Column("node_id", sa.String(255), nullable=True),
         sa.Column(
             "health_status",
-            sa.Enum("healthy", "unhealthy", "unknown", name="healthstatus"),
+            sa.Enum("healthy", "unhealthy", "unknown", name="healthstatus", create_type=False),
             nullable=False,
             server_default="unknown",
         ),
