@@ -19,16 +19,20 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 # Define enum types at module level for reuse
+# _create_events=False prevents the _on_table_create hook from firing
 nodestatus_enum = postgresql.ENUM(
     'pending', 'provisioning', 'running', 'stopped', 'error',
     name='nodestatus',
-    create_type=False  # We'll create explicitly with checkfirst
+    create_type=False,
 )
+nodestatus_enum._create_events = False  # Disable table creation hook
+
 healthstatus_enum = postgresql.ENUM(
     'healthy', 'unhealthy', 'unknown',
     name='healthstatus',
-    create_type=False
+    create_type=False,
 )
+healthstatus_enum._create_events = False  # Disable table creation hook
 
 
 def upgrade() -> None:
