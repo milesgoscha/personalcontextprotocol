@@ -1,4 +1,4 @@
-"""Subdomain proxy for MCP and API access to user nodes.
+"""Subdomain proxy middleware for MCP and API access to user nodes.
 
 Handles requests to {username}.pcp.bio/* by:
 1. Extracting username from Host header
@@ -9,17 +9,14 @@ This enables external MCP clients to connect to user nodes via subdomains.
 """
 
 import httpx
-from fastapi import APIRouter, Request, HTTPException, status
-from fastapi.responses import StreamingResponse, Response
+from fastapi import Request
+from fastapi.responses import Response, JSONResponse
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..config import get_settings
 from ..database import get_db_session
 from ..models import User, Node, NodeStatus
-
-
-router = APIRouter()
 
 
 async def _get_user_id_from_subdomain(host: str) -> str | None:
@@ -65,77 +62,91 @@ async def _get_user_id_from_subdomain(host: str) -> str | None:
         return str(user.id)
 
 
-@router.api_route(
-    "/{path:path}",
-    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
-)
-async def proxy_to_node(request: Request, path: str) -> Response:
-    """Proxy any request to the user's PCP node.
+def _is_subdomain_request(host: str, main_domain: str) -> bool:
+    """Check if the request is from a subdomain."""
+    # Not a subdomain if it's the exact main domain
+    if host == main_domain or host == f"www.{main_domain}":
+        return False
 
-    This is a catch-all route that:
-    1. Extracts username from subdomain
-    2. Looks up user ID
-    3. Forwards request to shared node with X-User-Id header
-    """
-    settings = get_settings()
-    host = request.headers.get("host", "")
+    # Check if it's a subdomain of the main domain
+    if host.endswith(f".{main_domain}"):
+        subdomain = host[:-len(f".{main_domain}")]
+        # Make sure it's a single-level subdomain (no dots)
+        return subdomain and "." not in subdomain
 
-    # Skip if this is the main domain (not a subdomain)
-    if host == settings.pcp_domain or not host.endswith(f".{settings.pcp_domain}"):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Not found",
-        )
+    return False
 
-    # Get user ID from subdomain
-    user_id = await _get_user_id_from_subdomain(host)
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Node not found",
-        )
 
-    # Build target URL
-    target_url = f"{settings.shared_node_url}/{path}"
-    if request.url.query:
-        target_url += f"?{request.url.query}"
+class SubdomainProxyMiddleware(BaseHTTPMiddleware):
+    """Middleware that proxies subdomain requests to the shared PCP node."""
 
-    # Forward headers, adding X-User-Id
-    forward_headers = {}
-    for key, value in request.headers.items():
-        # Skip hop-by-hop headers and host
-        if key.lower() not in ("host", "connection", "keep-alive", "transfer-encoding"):
-            forward_headers[key] = value
+    async def dispatch(self, request: Request, call_next):
+        settings = get_settings()
+        host = request.headers.get("host", "").lower()
 
-    forward_headers["X-User-Id"] = user_id
+        # Strip port if present
+        if ":" in host:
+            host = host.split(":")[0]
 
-    # Get request body if present
-    body = await request.body()
+        # Check if this is a subdomain request
+        if not _is_subdomain_request(host, settings.pcp_domain):
+            # Not a subdomain - pass through to normal routes
+            return await call_next(request)
 
-    # Make the proxied request
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            response = await client.request(
-                method=request.method,
-                url=target_url,
-                headers=forward_headers,
-                content=body if body else None,
-            )
-        except httpx.RequestError as e:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to reach node: {e}",
+        # This is a subdomain request - handle the proxy
+        user_id = await _get_user_id_from_subdomain(host)
+        if not user_id:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Node not found"},
             )
 
-    # Return response, preserving status and headers
-    response_headers = dict(response.headers)
-    # Remove hop-by-hop headers
-    for header in ("connection", "keep-alive", "transfer-encoding", "content-encoding"):
-        response_headers.pop(header, None)
+        # Build target URL
+        path = request.url.path
+        target_url = f"{settings.shared_node_url}{path}"
+        if request.url.query:
+            target_url += f"?{request.url.query}"
 
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        headers=response_headers,
-        media_type=response.headers.get("content-type"),
-    )
+        # Forward headers, adding X-User-Id
+        forward_headers = {}
+        for key, value in request.headers.items():
+            # Skip hop-by-hop headers and host
+            if key.lower() not in ("host", "connection", "keep-alive", "transfer-encoding"):
+                forward_headers[key] = value
+
+        forward_headers["X-User-Id"] = user_id
+
+        # Get request body if present
+        body = await request.body()
+
+        # Make the proxied request
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                response = await client.request(
+                    method=request.method,
+                    url=target_url,
+                    headers=forward_headers,
+                    content=body if body else None,
+                )
+            except httpx.RequestError as e:
+                return JSONResponse(
+                    status_code=502,
+                    content={"detail": f"Failed to reach node: {e}"},
+                )
+
+        # Return response, preserving status and headers
+        response_headers = dict(response.headers)
+        # Remove hop-by-hop headers
+        for header in ("connection", "keep-alive", "transfer-encoding", "content-encoding"):
+            response_headers.pop(header, None)
+
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=response_headers,
+            media_type=response.headers.get("content-type"),
+        )
+
+
+# Note: This middleware should be added to the app, not registered as a router
+# See app.py for usage

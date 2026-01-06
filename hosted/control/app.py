@@ -119,8 +119,12 @@ def create_app() -> FastAPI:
         nodes_router,
         proxy_router,
         dashboard_router,
-        subdomain_proxy_router,
+        SubdomainProxyMiddleware,
     )
+
+    # Add subdomain proxy middleware FIRST (so it intercepts subdomain requests before routes)
+    # This handles requests to {username}.pcp.bio/* and proxies to the shared node
+    app.add_middleware(SubdomainProxyMiddleware)
 
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(nodes_router, prefix="/api/v1/node", tags=["nodes"])
@@ -128,10 +132,6 @@ def create_app() -> FastAPI:
 
     # Register dashboard routes (HTML pages)
     app.include_router(dashboard_router, tags=["dashboard"])
-
-    # Subdomain proxy for MCP access (catch-all, must be last)
-    # This handles requests to {username}.pcp.bio/* and proxies to the shared node
-    app.include_router(subdomain_proxy_router, tags=["subdomain-proxy"])
 
     @app.get("/health")
     async def health():
