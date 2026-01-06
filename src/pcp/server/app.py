@@ -352,13 +352,14 @@ def create_app(
             if x_user_id and not authorization:
                 from datetime import datetime, timedelta, UTC
                 # Return a synthetic admin token for control plane requests
+                # trust_tier is stored in metadata, not as a direct field
                 return Token(
                     token_id="control-plane",
                     subject="control-plane",
                     scopes=["pcp:admin"],
                     issued_at=datetime.now(UTC),
                     expires_at=datetime.now(UTC) + timedelta(hours=1),
-                    trust_tier="local",
+                    metadata={"trust_tier": "local"},
                 )
 
         if not authorization:
