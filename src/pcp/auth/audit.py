@@ -84,11 +84,27 @@ class AuditLog:
 
     In production, this would write to an append-only store.
     For now, keeps events in memory with optional file persistence.
+
+    In multi-tenant mode, pass user_id and data_dir to scope audit logs
+    to that user's directory.
     """
 
-    def __init__(self, persist_path: str | None = None):
+    def __init__(
+        self,
+        persist_path: str | None = None,
+        data_dir: str | None = None,
+        user_id: str | None = None,
+    ):
         self.events: list[AuditEvent] = []
-        self.persist_path = persist_path
+
+        # In multi-tenant mode, scope audit log to user's directory
+        if data_dir and user_id:
+            from pathlib import Path
+            user_dir = Path(data_dir) / user_id
+            user_dir.mkdir(parents=True, exist_ok=True)
+            self.persist_path = str(user_dir / "audit.jsonl")
+        else:
+            self.persist_path = persist_path
 
     def log(
         self,

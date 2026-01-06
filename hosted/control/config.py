@@ -37,7 +37,13 @@ class Settings(BaseSettings):
     pcp_domain: str = "pcp.example.com"
     pcp_image: str = "pcp:latest"
 
-    # Docker
+    # Multi-tenant mode
+    # When enabled, routes all requests to a shared PCP node with X-User-Id header
+    # When disabled, creates per-user Docker containers (legacy mode)
+    multi_tenant: bool = True
+    shared_node_url: str = "http://pcp-node:6001"
+
+    # Docker (only used when multi_tenant=False)
     docker_network: str = "pcp-network"
 
     # Server

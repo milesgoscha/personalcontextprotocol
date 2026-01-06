@@ -22,7 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from pcp.auth.tokens import Token, verify_token
+from pcp.auth.tokens import Token, TokenStore, verify_token
 
 
 def make_error_response(error: Exception, operation: str) -> str:
@@ -43,9 +43,10 @@ _current_token: ContextVar[Token | None] = ContextVar("current_token", default=N
 class TokenAuthMiddleware(BaseHTTPMiddleware):
     """Middleware to extract and validate bearer token from Authorization header."""
 
-    def __init__(self, app, ops):
+    def __init__(self, app, ops, get_token_store_fn=None):
         super().__init__(app)
         self.ops = ops
+        self.get_token_store_fn = get_token_store_fn
 
     async def dispatch(self, request: Request, call_next):
         # Extract token from Authorization header
@@ -59,7 +60,14 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
             )
 
         token_string = auth_header[7:]
-        token = verify_token(token_string)
+
+        # Use user-scoped token store if provided (multi-tenant mode),
+        # otherwise fall back to global verify_token (single-tenant mode)
+        if self.get_token_store_fn:
+            token_store = self.get_token_store_fn()
+            token = token_store.verify(token_string)
+        else:
+            token = verify_token(token_string)
 
         if token is None:
             return Response(
@@ -85,18 +93,28 @@ def get_current_token() -> Token:
     return token
 
 
-def create_mcp_sse_app(ops) -> tuple[Starlette, any]:
+def create_mcp_sse_app(ops, get_ops_fn=None, get_token_store_fn=None) -> tuple[Starlette, any]:
     """
     Create an MCP HTTP application with PCP tools.
 
     Args:
-        ops: PCPOperations instance for executing operations
+        ops: PCPOperations instance for executing operations (single-tenant mode)
+        get_ops_fn: Function to get user-scoped ops (multi-tenant mode)
+        get_token_store_fn: Function to get user-scoped token store (multi-tenant mode)
+
+    In multi-tenant mode, get_ops_fn and get_token_store_fn are called on each
+    request to get user-scoped resources based on the X-User-Id context variable.
 
     Returns:
         Tuple of (Starlette app, lifespan context manager).
         The lifespan must be composed with the parent app's lifespan
         for proper MCP session manager initialization.
     """
+    # Helper to get the correct ops instance
+    def _get_ops():
+        if get_ops_fn:
+            return get_ops_fn()
+        return ops
     # Create FastMCP server
     # Use host="0.0.0.0" to disable auto-enabled DNS rebinding protection
     # (which only allows localhost/127.0.0.1). We're behind Traefik with our
@@ -121,7 +139,7 @@ Always start by checking what context is available with pcp_query before making 
         """Get PCP node capabilities and schema versions."""
         try:
             token = get_current_token()
-            result = ops.describe(token)
+            result = _get_ops().describe(token)
             return json.dumps(result, indent=2, default=str)
         except Exception as e:
             return make_error_response(e, "describe")
@@ -157,7 +175,7 @@ Always start by checking what context is available with pcp_query before making 
                 if before:
                     timerange["before"] = before
 
-            result = ops.query(
+            result = _get_ops().query(
                 token=token,
                 object_types=object_types,
                 disclosure=disclosure,
@@ -192,7 +210,7 @@ Always start by checking what context is available with pcp_query before making 
                     "detail": detail or {},
                 },
             }
-            result = ops.observe(token=token, objects=[event])
+            result = _get_ops().observe(token=token, objects=[event])
             return json.dumps(result, indent=2, default=str)
         except Exception as e:
             return make_error_response(e, "observe")
@@ -208,7 +226,7 @@ Always start by checking what context is available with pcp_query before making 
         try:
             token = get_current_token()
 
-            result = ops.learn(
+            result = _get_ops().learn(
                 token=token,
                 key=key,
                 statement=statement,
@@ -239,7 +257,7 @@ Always start by checking what context is available with pcp_query before making 
                 if end:
                     horizon["end"] = end
 
-            result = ops.reflect(
+            result = _get_ops().reflect(
                 token=token,
                 prompt=prompt,
                 scope=scope,
@@ -257,9 +275,11 @@ Always start by checking what context is available with pcp_query before making 
     mcp_lifespan = http_app.router.lifespan_context
 
     # Add auth middleware to the app
+    # Note: ops may be None in multi-tenant mode, but middleware doesn't need it
+    # Pass get_token_store_fn for user-scoped token verification in multi-tenant mode
     app = Starlette(
         routes=http_app.routes,
-        middleware=[Middleware(TokenAuthMiddleware, ops=ops)],
+        middleware=[Middleware(TokenAuthMiddleware, ops=ops, get_token_store_fn=get_token_store_fn)],
     )
 
     return app, mcp_lifespan

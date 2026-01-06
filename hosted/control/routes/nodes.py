@@ -1,6 +1,13 @@
 """Node management routes.
 
 Handles node provisioning, status, restart, and deletion.
+
+In multi-tenant mode, node provisioning is simplified:
+- No Docker containers are created
+- Node record is created with "running" status immediately
+- All users share a single PCP node, scoped by X-User-Id header
+
+In legacy mode (multi_tenant=False), Docker containers are provisioned per user.
 """
 
 import asyncio
@@ -71,12 +78,49 @@ async def _log_audit(
     db.add(log)
 
 
-async def _provision_node_task(
+async def _provision_node_multi_tenant(
+    db: AsyncSession,
+    node: Node,
+    user_id: str,
+    username: str,
+) -> None:
+    """Provision a node in multi-tenant mode (no Docker).
+
+    In multi-tenant mode, we just mark the node as running immediately.
+    The shared PCP node handles all requests, scoped by X-User-Id header.
+    """
+    settings = get_settings()
+
+    # Generate node ID and public URL
+    pcp_node_id = f"pcp://{username}"
+    public_url = f"https://{username}.{settings.pcp_domain}"
+
+    # No container, no admin token - the shared node uses X-User-Id
+    node.node_id = pcp_node_id
+    node.public_url = public_url
+    node.status = NodeStatus.RUNNING
+    node.health_status = HealthStatus.HEALTHY
+    node.last_health_check = datetime.now(UTC)
+    node.error_message = None
+
+    await db.commit()
+
+    # Audit log
+    await _log_audit(
+        db,
+        user_id,
+        "node_provisioned",
+        f"Node {pcp_node_id} provisioned (multi-tenant mode)",
+    )
+    await db.commit()
+
+
+async def _provision_node_legacy_task(
     node_id: str,
     user_id: str,
     username: str,
 ) -> None:
-    """Background task to provision a node.
+    """Background task to provision a node in legacy (per-container) mode.
 
     This runs asynchronously after the initial node record is created.
     Updates the node status as it progresses through provisioning.
@@ -211,7 +255,12 @@ async def provision_node(
 
     This is called automatically after signup, but can also be called
     manually to retry failed provisioning.
+
+    In multi-tenant mode, provisioning is instant (no Docker containers).
+    In legacy mode, Docker containers are provisioned in the background.
     """
+    settings = get_settings()
+
     # Check if node already exists
     node = await _get_user_node(db, current_user.id)
 
@@ -244,13 +293,22 @@ async def provision_node(
 
     await db.commit()
 
-    # Start provisioning in background
-    background_tasks.add_task(
-        _provision_node_task,
-        node.id,
-        current_user.id,
-        current_user.username,
-    )
+    if settings.multi_tenant:
+        # Multi-tenant mode: instant provisioning (no Docker)
+        await _provision_node_multi_tenant(
+            db, node, current_user.id, current_user.username
+        )
+    else:
+        # Legacy mode: provision Docker container in background
+        background_tasks.add_task(
+            _provision_node_legacy_task,
+            node.id,
+            current_user.id,
+            current_user.username,
+        )
+
+    # Refresh node to get latest state
+    await db.refresh(node)
 
     return NodeResponse(
         id=node.id,
@@ -269,7 +327,18 @@ async def restart_node(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> NodeResponse:
-    """Restart the user's node."""
+    """Restart the user's node.
+
+    Note: In multi-tenant mode, restart is not supported (no per-user container).
+    """
+    settings = get_settings()
+
+    if settings.multi_tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Restart not supported in multi-tenant mode",
+        )
+
     node = await _get_user_node(db, current_user.id)
 
     if not node:
@@ -322,7 +391,18 @@ async def stop_node(
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> NodeResponse:
-    """Stop the user's node."""
+    """Stop the user's node.
+
+    Note: In multi-tenant mode, stop is not supported (no per-user container).
+    """
+    settings = get_settings()
+
+    if settings.multi_tenant:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stop not supported in multi-tenant mode",
+        )
+
     node = await _get_user_node(db, current_user.id)
 
     if not node:
@@ -382,8 +462,13 @@ async def delete_node(
     """Delete the user's node and all data.
 
     Requires password confirmation. This action is irreversible.
+
+    In multi-tenant mode, only the node record is deleted (data remains
+    in the shared storage and should be cleaned up separately).
     """
     from ..auth.password import verify_password
+
+    settings = get_settings()
 
     # Verify password
     if not verify_password(request.password, current_user.password_hash):
@@ -398,9 +483,10 @@ async def delete_node(
         return  # No node to delete
 
     try:
-        # Clean up Docker resources
-        provisioner = get_provisioner()
-        await provisioner.cleanup_user(current_user.username)
+        if not settings.multi_tenant:
+            # Legacy mode: clean up Docker resources
+            provisioner = get_provisioner()
+            await provisioner.cleanup_user(current_user.username)
 
         # Delete node record
         await db.delete(node)
@@ -427,7 +513,18 @@ async def get_node_logs(
     db: Annotated[AsyncSession, Depends(get_db)],
     tail: int = 100,
 ) -> NodeLogsResponse:
-    """Get recent logs from the user's node."""
+    """Get recent logs from the user's node.
+
+    Note: In multi-tenant mode, container logs are not available.
+    """
+    settings = get_settings()
+
+    if settings.multi_tenant:
+        return NodeLogsResponse(
+            logs="Container logs not available in multi-tenant mode.\n"
+            "Check the shared node logs for debugging."
+        )
+
     node = await _get_user_node(db, current_user.id)
 
     if not node:

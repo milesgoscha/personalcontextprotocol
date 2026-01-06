@@ -2,6 +2,9 @@
 
 These routes proxy requests to the user's node using the stored admin token.
 Used by the dashboard to manage grants, tokens, and view audit logs.
+
+In multi-tenant mode, routes to a shared PCP node with X-User-Id header.
+In legacy mode, routes to per-user Docker containers.
 """
 
 from typing import Annotated, Any
@@ -13,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.middleware import CurrentUser
+from ..config import get_settings
 from ..database import get_db
 from ..models import Node, NodeStatus
 from ..services.encryption import decrypt_token, DecryptionError
@@ -61,58 +65,86 @@ class AuditLogEntry(BaseModel):
 # --- Helper Functions ---
 
 
-async def _get_node_client(
+async def _get_node_client_context(
     db: AsyncSession,
     user_id: str,
     username: str,
-) -> tuple[Node, str]:
-    """Get the user's node and decrypted admin token.
+) -> tuple[str, str | None, dict[str, str]]:
+    """Get the URL, admin token, and headers for proxying to user's node.
+
+    In multi-tenant mode:
+        - Routes to shared node with X-User-Id header
+        - No admin token needed (shared node authenticates via header)
+
+    In legacy mode:
+        - Routes to per-user Docker container
+        - Uses encrypted admin token for authentication
 
     Returns:
-        Tuple of (node, admin_token).
+        Tuple of (internal_url, admin_token, extra_headers).
 
     Raises:
-        HTTPException: If node not found, not running, or token decryption fails.
+        HTTPException: If node not found or not ready.
     """
-    result = await db.execute(select(Node).where(Node.user_id == user_id))
-    node = result.scalar_one_or_none()
+    settings = get_settings()
 
-    if not node:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No node found",
-        )
+    if settings.multi_tenant:
+        # Multi-tenant mode: route to shared node with X-User-Id header
+        result = await db.execute(select(Node).where(Node.user_id == user_id))
+        node = result.scalar_one_or_none()
 
-    if node.status != NodeStatus.RUNNING:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Node is not running (status: {node.status.value})",
-        )
+        if not node:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No node found",
+            )
 
-    if not node.admin_token_encrypted:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Node admin token not available",
-        )
+        if node.status != NodeStatus.RUNNING:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Node is not running (status: {node.status.value})",
+            )
 
-    try:
-        admin_token = decrypt_token(
-            node.admin_token_encrypted,
-            user_id,
-            node.admin_token_version,
-        )
-    except DecryptionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to decrypt admin token",
-        )
+        # In multi-tenant mode, the shared node handles auth via X-User-Id
+        return settings.shared_node_url, None, {"X-User-Id": user_id}
 
-    return node, admin_token
+    else:
+        # Legacy mode: per-user Docker containers
+        result = await db.execute(select(Node).where(Node.user_id == user_id))
+        node = result.scalar_one_or_none()
 
+        if not node:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No node found",
+            )
 
-def _get_internal_url(username: str) -> str:
-    """Get the internal Docker network URL for a user's node."""
-    return f"http://pcp-{username}:6001"
+        if node.status != NodeStatus.RUNNING:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Node is not running (status: {node.status.value})",
+            )
+
+        if not node.admin_token_encrypted:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Node admin token not available",
+            )
+
+        try:
+            admin_token = decrypt_token(
+                node.admin_token_encrypted,
+                user_id,
+                node.admin_token_version,
+            )
+        except DecryptionError:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to decrypt admin token",
+            )
+
+        internal_url = f"http://pcp-{username}:6001"
+        return internal_url, admin_token, {}
 
 
 # --- Grant Routes ---
@@ -124,11 +156,12 @@ async def get_grants(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[GrantResponse]:
     """Get all grants from the user's node."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             grants = await client.get_grants()
             return [GrantResponse(**g) for g in grants]
     except NodeAuthError:
@@ -150,11 +183,12 @@ async def approve_grant(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GrantResponse:
     """Approve a pending grant."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             grant = await client.approve_grant(grant_id)
             return GrantResponse(**grant)
     except NodeAuthError:
@@ -181,11 +215,12 @@ async def deny_grant(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GrantResponse:
     """Deny a pending grant."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             grant = await client.deny_grant(grant_id)
             return GrantResponse(**grant)
     except NodeAuthError:
@@ -212,11 +247,12 @@ async def revoke_grant(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GrantResponse:
     """Revoke an active grant."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             grant = await client.revoke_grant(grant_id)
             return GrantResponse(**grant)
     except NodeAuthError:
@@ -251,11 +287,12 @@ async def create_token(
 
     Accepts form data and returns HTML for HTMX integration.
     """
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             token = await client.create_token(
                 subject=subject,
                 scopes=scopes,
@@ -301,11 +338,12 @@ async def get_audit_log(
     offset: int = 0,
 ) -> list[AuditLogEntry]:
     """Get audit log entries from the user's node."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             entries = await client.get_audit_log(limit=limit, offset=offset)
             return [AuditLogEntry(**e) for e in entries]
     except NodeAuthError:
@@ -329,11 +367,12 @@ async def export_data(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StreamingResponse:
     """Export all data from the user's node as JSONL."""
-    node, admin_token = await _get_node_client(db, current_user.id, current_user.username)
-    internal_url = _get_internal_url(current_user.username)
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
 
     try:
-        async with NodeClient(internal_url, admin_token) as client:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
             data = await client.export_data()
 
             return StreamingResponse(

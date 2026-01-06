@@ -6,15 +6,21 @@ Exposes PCP operations over HTTP with proper auth handling.
 
 import os
 from collections import defaultdict
+from contextvars import ContextVar
 from pathlib import Path
 from time import time
 from typing import Any
 
 from datetime import datetime
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from .config import Config
+
+# Context variable for current user ID (set by middleware in multi-tenant mode)
+current_user_id: ContextVar[str | None] = ContextVar("current_user_id", default=None)
 
 
 # Rate limiting
@@ -76,9 +82,91 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return await call_next(request)
 
+
+def _extract_user_from_host(host: str, pcp_domain: str | None = None) -> str | None:
+    """Extract user_id from subdomain in Host header.
+
+    Example: "alice.pcp.example.com" → "alice"
+    Example: "alice.pcp.example.com:443" → "alice"
+    """
+    if not host:
+        return None
+
+    # Remove port if present
+    host = host.split(":")[0].lower()
+
+    # Try to extract subdomain
+    # For "alice.pcp.example.com" where pcp_domain="pcp.example.com"
+    # The user would be "alice"
+    if pcp_domain:
+        pcp_domain = pcp_domain.lower()
+        if host.endswith(f".{pcp_domain}"):
+            # Extract everything before .pcp_domain
+            subdomain = host[: -(len(pcp_domain) + 1)]
+            if subdomain and "." not in subdomain:
+                return subdomain
+
+    # Fallback: try to extract first subdomain part
+    # For "alice.anything.com", return "alice"
+    parts = host.split(".")
+    if len(parts) >= 3:  # subdomain.domain.tld
+        subdomain = parts[0]
+        if subdomain and subdomain.isalnum():
+            return subdomain
+
+    return None
+
+
+class UserContextMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware for multi-tenant user identification.
+
+    In multi-tenant mode, identifies user from:
+    1. X-User-Id header (used by control plane proxy)
+    2. Host header subdomain (used by direct agent connections)
+
+    All routes (including /mcp/*) will have access to this context variable.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        user_id = None
+
+        if Config.MULTI_TENANT:
+            # First, try X-User-Id header (control plane proxy)
+            user_id = request.headers.get("X-User-Id")
+
+            # Fallback: extract from Host header subdomain (direct agent access)
+            if not user_id:
+                host = request.headers.get("Host", "")
+                # Get PCP domain from config or environment
+                pcp_domain = os.getenv("PCP_DOMAIN")
+                user_id = _extract_user_from_host(host, pcp_domain)
+
+            # Allow health checks without user_id
+            if not user_id and not request.url.path.startswith("/health"):
+                return JSONResponse(
+                    {"error": "User identification required. Provide X-User-Id header or use subdomain."},
+                    status_code=400,
+                )
+
+        # Set user_id in context for this request
+        token = current_user_id.set(user_id)
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            current_user_id.reset(token)
+
+
+def get_current_user_id() -> str | None:
+    """Get the current user ID from context (for use in dependency injection)."""
+    return current_user_id.get()
+
+
+from pcp.auth.audit import AuditLog
 from pcp.auth.grants import Grant, GrantStatus, GrantStore, TrustTier
 from pcp.auth.scopes import Operation, validate_scope
-from pcp.auth.tokens import Token, init_token_store, verify_token
+from pcp.auth.tokens import Token, TokenStore, init_token_store
 from pcp.models.envelope import ObjectType
 
 from .operations import PCPOperations
@@ -124,30 +212,8 @@ class ReflectRequest(BaseModel):
     replace_scope: bool = False
 
 
-# Dependency for token verification
-
-async def get_token(authorization: str | None = Header(None)) -> Token | None:
-    """Extract and verify token from Authorization header."""
-    if not authorization:
-        return None
-
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-
-    token_string = authorization[7:]
-    token = verify_token(token_string)
-
-    if token is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    return token
-
-
-async def require_token(token: Token | None = Depends(get_token)) -> Token:
-    """Require a valid token."""
-    if token is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    return token
+# Note: get_token and require_token dependencies are defined inside create_app()
+# to access user-scoped TokenStore in multi-tenant mode.
 
 
 def has_admin_access(token: Token) -> bool:
@@ -198,21 +264,99 @@ def create_app(
         data_dir: Directory for persistent storage
         public_url: Public URL for this node (for discovery)
         node_id: Node identifier (pcp:// URI)
+
+    In multi-tenant mode (PCP_MULTI_TENANT=true):
+        - X-User-Id header is required on all requests
+        - Storage is scoped to /data/{user_id}/
+        - Traefik is expected to add X-User-Id based on subdomain
     """
     if data_dir is None:
-        # Check environment variable, fall back to ~/.pcp/data
-        data_dir = os.environ.get("PCP_DATA_DIR", str(Path.home() / ".pcp" / "data"))
+        data_dir = Config.DATA_DIR
     data_dir = Path(data_dir)
 
     # URLs from args, environment, or defaults
     _public_url = public_url or os.environ.get("PCP_PUBLIC_URL", "http://localhost:6001")
-    _node_id = node_id or os.environ.get("PCP_NODE_ID", "pcp://local")
+    _node_id = node_id or Config.NODE_ID
 
-    # Initialize persistent stores
-    storage = Storage(data_dir=data_dir)
-    ops = PCPOperations(storage=storage, node_id=_node_id)
-    grant_store = GrantStore(data_dir=data_dir)
-    init_token_store(data_dir)  # Initialize token persistence
+    # In single-tenant mode, create storage once at startup
+    # In multi-tenant mode, storage is created per-request via dependency injection
+    if not Config.MULTI_TENANT:
+        storage = Storage(data_dir=data_dir)
+        audit_log = AuditLog(persist_path=str(data_dir / "audit.jsonl"))
+        ops = PCPOperations(storage=storage, node_id=_node_id, audit_log=audit_log)
+        token_store = TokenStore(data_dir=data_dir)
+        grant_store = GrantStore(data_dir=data_dir, token_store=token_store)
+        # Also initialize global token store for backward compatibility
+        init_token_store(data_dir)
+    else:
+        # These will be overridden by dependency injection per request
+        storage = None
+        ops = None
+        grant_store = None
+        token_store = None
+        audit_log = None
+
+    # Dependency injection functions for multi-tenant mode
+    def get_storage() -> Storage:
+        """Get storage instance, scoped to current user in multi-tenant mode."""
+        user_id = get_current_user_id()
+        if Config.MULTI_TENANT:
+            return Storage(data_dir=data_dir, user_id=user_id)
+        return storage
+
+    def get_grant_store() -> GrantStore:
+        """Get grant store, scoped to current user in multi-tenant mode."""
+        user_id = get_current_user_id()
+        if Config.MULTI_TENANT:
+            # Pass user-scoped token_store so issued tokens use per-user signing keys
+            return GrantStore(data_dir=data_dir, user_id=user_id, token_store=get_token_store())
+        return grant_store
+
+    def get_token_store() -> TokenStore:
+        """Get token store, scoped to current user in multi-tenant mode."""
+        user_id = get_current_user_id()
+        if Config.MULTI_TENANT:
+            return TokenStore(data_dir=data_dir, user_id=user_id)
+        return token_store
+
+    def get_audit_log() -> AuditLog:
+        """Get audit log, scoped to current user in multi-tenant mode."""
+        user_id = get_current_user_id()
+        if Config.MULTI_TENANT:
+            return AuditLog(data_dir=str(data_dir), user_id=user_id)
+        return audit_log
+
+    def get_ops() -> PCPOperations:
+        """Get operations instance, scoped to current user in multi-tenant mode."""
+        if Config.MULTI_TENANT:
+            user_storage = get_storage()
+            user_audit_log = get_audit_log()
+            return PCPOperations(storage=user_storage, node_id=_node_id, audit_log=user_audit_log)
+        return ops
+
+    # Token verification dependencies (defined here to access user-scoped token store)
+    async def get_token(authorization: str | None = Header(None)) -> Token | None:
+        """Extract and verify token from Authorization header."""
+        if not authorization:
+            return None
+
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+        token_string = authorization[7:]
+        ts = get_token_store()
+        token = ts.verify(token_string)
+
+        if token is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        return token
+
+    async def require_token(token: Token | None = Depends(get_token)) -> Token:
+        """Require a valid token."""
+        if token is None:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        return token
 
     app = FastAPI(
         title="PCP Node",
@@ -220,8 +364,9 @@ def create_app(
         version="0.1.0",
     )
 
-    # Add rate limiting middleware
+    # Add middleware (order matters - user context must be set before rate limiting uses it)
     app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(UserContextMiddleware)
 
     @app.get("/")
     async def root():
@@ -268,13 +413,13 @@ def create_app(
     @app.get("/api/describe")
     async def describe(token: Token | None = Depends(get_token)):
         """Get node capabilities."""
-        return ops.describe(token)
+        return get_ops().describe(token)
 
     @app.post("/api/query")
     async def query(request: QueryRequest, token: Token = Depends(require_token)):
         """Query objects."""
         try:
-            return ops.query(
+            return get_ops().query(
                 token=token,
                 object_types=request.object_types,
                 disclosure=request.disclosure,
@@ -294,7 +439,7 @@ def create_app(
     async def observe(request: ObserveRequest, token: Token = Depends(require_token)):
         """Ingest events."""
         try:
-            return ops.observe(
+            return get_ops().observe(
                 token=token,
                 objects=request.objects,
                 ingest_mode=request.ingest_mode,
@@ -307,7 +452,7 @@ def create_app(
     async def learn(request: LearnRequest, token: Token = Depends(require_token)):
         """Store a learning."""
         try:
-            return ops.learn(
+            return get_ops().learn(
                 token=token,
                 key=request.key,
                 statement=request.statement,
@@ -323,7 +468,7 @@ def create_app(
     async def reflect(request: ReflectRequest, token: Token = Depends(require_token)):
         """Generate a reflection."""
         try:
-            return ops.reflect(
+            return get_ops().reflect(
                 token=token,
                 prompt=request.prompt,
                 scope=request.scope,
@@ -350,7 +495,7 @@ def create_app(
         except ValueError as e:
             raise HTTPException(status_code=403, detail=str(e))
 
-        identity = storage.get_identity()
+        identity = get_storage().get_identity()
         if identity is None:
             raise HTTPException(status_code=404, detail="Identity not set")
         return identity
@@ -368,7 +513,7 @@ def create_app(
         except ValueError as e:
             raise HTTPException(status_code=403, detail=str(e))
 
-        return storage.set_identity(identity)
+        return get_storage().set_identity(identity)
 
     # Token endpoint (for local dev - in production, use proper auth flow)
 
@@ -381,9 +526,9 @@ def create_app(
     async def create_token_endpoint(request: TokenRequest):
         """Create an access token (dev only)."""
         from datetime import timedelta
-        from pcp.auth.tokens import create_token
 
-        token_string, token_obj = create_token(
+        ts = get_token_store()
+        token_string, token_obj = ts.create(
             subject=request.subject,
             scopes=request.scopes,
             expires_in=timedelta(hours=request.hours),
@@ -425,7 +570,7 @@ def create_app(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid trust tier: {request.trust_tier}")
 
-        grant, claim_secret = grant_store.create(
+        grant, claim_secret = get_grant_store().create(
             client_id=request.client_id,
             client_name=request.client_name,
             scopes_requested=request.scopes_requested,
@@ -450,7 +595,7 @@ def create_app(
         """List grants. Requires admin access."""
         require_admin(token)
         status_filter = GrantStatus(status) if status else None
-        grants = grant_store.list_grants(status=status_filter, client_id=client_id)
+        grants = get_grant_store().list_grants(status=status_filter, client_id=client_id)
         return {
             "grants": [g.to_dict() for g in grants],
             "count": len(grants),
@@ -465,7 +610,7 @@ def create_app(
         - Admin access (can see any grant), OR
         - The caller is the original requester (can only see their own grant)
         """
-        grant = grant_store.get(grant_id)
+        grant = get_grant_store().get(grant_id)
         if not grant:
             raise HTTPException(status_code=404, detail="Grant not found")
 
@@ -489,7 +634,7 @@ def create_app(
         """Approve a pending grant. Requires admin access."""
         require_admin(token)
         approval = approval or GrantApproval()
-        grant = grant_store.approve(
+        grant = get_grant_store().approve(
             grant_id=grant_id,
             scopes=approval.scopes,
             lifetime_hours=approval.lifetime_hours,
@@ -512,7 +657,7 @@ def create_app(
         """Deny a pending grant. Requires admin access."""
         require_admin(token)
         denial = denial or GrantDenial()
-        grant = grant_store.deny(grant_id=grant_id, reason=denial.reason)
+        grant = get_grant_store().deny(grant_id=grant_id, reason=denial.reason)
         if not grant:
             raise HTTPException(status_code=400, detail="Grant not found or not pending")
         return {
@@ -528,7 +673,7 @@ def create_app(
     ):
         """Revoke an approved grant. Requires admin access."""
         require_admin(token)
-        grant = grant_store.revoke(grant_id=grant_id)
+        grant = get_grant_store().revoke(grant_id=grant_id)
         if not grant:
             raise HTTPException(status_code=400, detail="Grant not found or not approved")
         return {
@@ -547,7 +692,7 @@ def create_app(
         Requires the claim_secret that was returned when the grant was created.
         This ensures only the original requester can claim the token.
         """
-        result = grant_store.issue_token(grant_id=grant_id, claim_secret=request.claim_secret)
+        result = get_grant_store().issue_token(grant_id=grant_id, claim_secret=request.claim_secret)
         if not result:
             raise HTTPException(
                 status_code=400,
@@ -581,8 +726,6 @@ def create_app(
         - Admin users can query all events
         - Non-admin users can only query their own events (requester = token.subject)
         """
-        from pcp.auth.audit import get_audit_log
-
         is_admin = has_admin_access(token)
 
         # Non-admins can only query their own history
@@ -594,14 +737,15 @@ def create_app(
                 )
             requester = token.subject  # Force filter to own events
 
-        audit_log = get_audit_log()
+        # Use local get_audit_log() which scopes to user in multi-tenant mode
+        user_audit_log = get_audit_log()
 
         # Parse time filters
         since_dt = datetime.fromisoformat(since) if since else None
         before_dt = datetime.fromisoformat(before) if before else None
 
         # Query with filters
-        events = audit_log.query(
+        events = user_audit_log.query(
             operation=operation,
             requester=requester,
             since=since_dt,
@@ -639,9 +783,10 @@ def create_app(
         import json
 
         require_admin(token)
+        user_storage = get_storage()
 
         async def generate():
-            for obj_id, obj in storage._objects.items():
+            for obj_id, obj in user_storage._objects.items():
                 # Filter by type if specified
                 if type:
                     obj_type = obj.get("envelope", {}).get("type")
@@ -676,6 +821,7 @@ def create_app(
         import json
 
         require_admin(token)
+        user_storage = get_storage()
 
         body = await request.body()
         lines = body.decode("utf-8").strip().split("\n")
@@ -703,14 +849,14 @@ def create_app(
 
                 # Check if object already exists
                 obj_id = envelope.get("id")
-                if obj_id and obj_id in storage._objects:
+                if obj_id and obj_id in user_storage._objects:
                     if merge:
-                        storage.store(obj)
+                        user_storage.store(obj)
                         imported += 1
                     else:
                         skipped += 1
                 else:
-                    storage.store(obj)
+                    user_storage.store(obj)
                     imported += 1
 
             except json.JSONDecodeError as e:
@@ -734,7 +880,13 @@ def create_app(
     from contextlib import asynccontextmanager
     from pcp.mcp.sse import create_mcp_sse_app
 
-    mcp_app, mcp_lifespan = create_mcp_sse_app(ops)
+    # In multi-tenant mode, MCP uses get_ops() and get_token_store() for user-scoped resources
+    # In single-tenant mode, we use the pre-created instances
+    mcp_app, mcp_lifespan = create_mcp_sse_app(
+        ops if not Config.MULTI_TENANT else None,
+        get_ops_fn=get_ops,
+        get_token_store_fn=get_token_store if Config.MULTI_TENANT else None,
+    )
 
     # Create a composed lifespan that initializes MCP's session manager
     @asynccontextmanager

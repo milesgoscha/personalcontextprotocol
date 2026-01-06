@@ -35,14 +35,25 @@ class Storage:
     - Filtering by type, tags, time range
     - Cursor-based pagination
     - Progressive disclosure filtering
+
+    In multi-tenant mode, pass user_id to scope storage to that user's directory.
+    When user_id is None, storage operates in single-tenant mode (backward compatible).
     """
 
     data_dir: Path
+    user_id: str | None = None
     _objects: dict[str, dict[str, Any]] = field(default_factory=dict)
     _identity: dict[str, Any] | None = None
 
     def __post_init__(self):
-        self.data_dir = Path(self.data_dir)
+        base_dir = Path(self.data_dir)
+
+        # In multi-tenant mode, scope to user's directory
+        if self.user_id:
+            self.data_dir = base_dir / self.user_id
+        else:
+            self.data_dir = base_dir
+
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._load()
 

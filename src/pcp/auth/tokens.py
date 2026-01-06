@@ -68,10 +68,20 @@ class TokenStore:
     Persistent token storage.
 
     Stores tokens and the signing key to disk so they survive restarts.
+
+    In multi-tenant mode, pass user_id to scope tokens to that user's directory.
+    When user_id is None, storage operates in single-tenant mode (backward compatible).
     """
 
-    def __init__(self, data_dir: Path):
-        self.data_dir = Path(data_dir)
+    def __init__(self, data_dir: Path, user_id: str | None = None):
+        base_dir = Path(data_dir)
+
+        # In multi-tenant mode, scope to user's directory
+        if user_id:
+            self.data_dir = base_dir / user_id
+        else:
+            self.data_dir = base_dir
+
         self.tokens_file = self.data_dir / "tokens.json"
         self.key_file = self.data_dir / "signing_key.bin"
         self._tokens: dict[str, Token] = {}

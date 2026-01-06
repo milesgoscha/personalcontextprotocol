@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from pcp.auth.audit import log_operation
+from pcp.auth.audit import AuditLog, log_operation
 from pcp.auth.grants import TrustTier
 from pcp.auth.redactions import apply_redactions, get_effective_disclosure
 from pcp.auth.scopes import Operation, ScopeSet, validate_scope
@@ -45,6 +45,15 @@ class PCPOperations:
 
     storage: Storage
     node_id: str = "pcp://local"
+    audit_log: AuditLog | None = None
+
+    def _log_operation(self, **kwargs) -> None:
+        """Log operation to audit trail (user-scoped in multi-tenant mode)."""
+        if self.audit_log:
+            self.audit_log.log(**kwargs)
+        else:
+            # Fall back to global for backward compatibility
+            log_operation(**kwargs)
 
     def describe(self, token: Token | None = None) -> dict[str, Any]:
         """
@@ -54,7 +63,7 @@ class PCPOperations:
         """
         requester = token.subject if token else "anonymous"
 
-        log_operation(
+        self._log_operation(
             operation="describe",
             requester=requester,
             token_id=token.token_id if token else None,
@@ -165,7 +174,7 @@ class PCPOperations:
         effective_disclosure = get_effective_disclosure(trust_tier, disclosure)
 
         # Log operation
-        log_operation(
+        self._log_operation(
             operation="query",
             requester=token.subject,
             token_id=token.token_id,
@@ -264,7 +273,7 @@ class PCPOperations:
             stored_ids.append(obj_id)
 
         # Log operation
-        log_operation(
+        self._log_operation(
             operation="observe",
             requester=token.subject,
             token_id=token.token_id,
@@ -337,7 +346,7 @@ class PCPOperations:
             previous = None
 
         # Log operation
-        log_operation(
+        self._log_operation(
             operation="learn",
             requester=token.subject,
             token_id=token.token_id,
@@ -474,7 +483,7 @@ Provide a reflection based on this context."""
             obj_id = self.storage.store(reflection)
 
         # Log operation
-        log_operation(
+        self._log_operation(
             operation="reflect",
             requester=token.subject,
             token_id=token.token_id,

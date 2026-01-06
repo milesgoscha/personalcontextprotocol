@@ -1,5 +1,9 @@
-# Traefik dynamic configuration
+# Traefik dynamic configuration for PCP Multi-Tenant Mode
 # This file contains middleware and routing rules
+#
+# Architecture:
+#   - Main domain (pcp.example.com) → Control Plane dashboard
+#   - User subdomains (*.pcp.example.com) → Shared PCP Node with X-User-Id header
 
 http:
   # Middlewares
@@ -34,9 +38,24 @@ http:
           X-Forwarded-Host: ""
           X-Real-IP: ""
 
-  # Routers for the control plane
+    # Add X-User-Id header for multi-tenant routing
+    # NOTE: Traefik doesn't natively support extracting subdomain to header.
+    # Options:
+    #   1. Use traefik-plugin-rewrite-headers plugin
+    #   2. Use a small middleware service (nginx/caddy)
+    #   3. Handle at PCP node level (extract from Host header)
+    #
+    # For now, we rely on the PCP node to extract user from Host header.
+    # The shared node checks X-User-Id first, then falls back to Host header.
+    add-user-id-placeholder:
+      headers:
+        customRequestHeaders:
+          # Placeholder - actual X-User-Id is extracted from Host at the node
+          X-PCP-Multi-Tenant: "true"
+
+  # Routers
   routers:
-    # Main control plane dashboard
+    # Main control plane dashboard (exact domain match)
     control-plane:
       rule: "Host(`{{ env \"PCP_DOMAIN\" }}`)"
       service: control-plane
@@ -46,8 +65,9 @@ http:
         certResolver: letsencrypt
       middlewares:
         - security-headers
+      priority: 100  # Higher priority than wildcard
 
-    # API routes with rate limiting
+    # API routes with rate limiting (exact domain match)
     control-plane-api:
       rule: "Host(`{{ env \"PCP_DOMAIN\" }}`) && PathPrefix(`/api/`)"
       service: control-plane
@@ -58,6 +78,21 @@ http:
       middlewares:
         - security-headers
         - rate-limit-auth
+      priority: 100
+
+    # User subdomains → Shared PCP Node (wildcard match)
+    # Routes: {username}.pcp.example.com → pcp-node
+    pcp-node-wildcard:
+      rule: "HostRegexp(`{subdomain:[a-z0-9-]+}.{{ env \"PCP_DOMAIN\" }}`)"
+      service: pcp-node
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - add-user-id-placeholder
+      priority: 50  # Lower priority than exact matches
 
   # Services
   services:
@@ -65,3 +100,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://control-plane:8000"
+
+    pcp-node:
+      loadBalancer:
+        servers:
+          - url: "http://pcp-node:6001"

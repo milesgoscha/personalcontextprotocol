@@ -38,23 +38,26 @@ class NodeClient:
         self,
         base_url: str,
         admin_token: str | None = None,
+        extra_headers: dict[str, str] | None = None,
         timeout: float = 10.0,
     ):
         """Initialize the node client.
 
         Args:
             base_url: The node's base URL (e.g., http://pcp-alice:6001)
-            admin_token: Optional admin token for authenticated requests.
+            admin_token: Optional admin token for authenticated requests (legacy mode).
+            extra_headers: Additional headers to include (e.g., X-User-Id for multi-tenant).
             timeout: Request timeout in seconds.
         """
         self.base_url = base_url.rstrip("/")
         self.admin_token = admin_token
+        self.extra_headers = extra_headers or {}
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self) -> "NodeClient":
         """Enter async context."""
-        headers = {}
+        headers = dict(self.extra_headers)
         if self.admin_token:
             headers["Authorization"] = f"Bearer {self.admin_token}"
 

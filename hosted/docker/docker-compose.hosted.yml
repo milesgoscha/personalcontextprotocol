@@ -1,5 +1,11 @@
-# Docker Compose for PCP Hosted Service
-# Includes: Traefik (reverse proxy), Control Plane, PostgreSQL
+# Docker Compose for PCP Hosted Service (Multi-Tenant Mode)
+# Includes: Traefik (reverse proxy), Control Plane, Shared PCP Node, PostgreSQL
+#
+# Architecture:
+#   - Single shared PCP node handles all users
+#   - Traefik routes *.pcp.domain → shared node with X-User-Id header
+#   - Control plane manages user accounts and proxies dashboard requests
+#   - No per-user Docker containers needed
 
 services:
   # Traefik reverse proxy
@@ -64,7 +70,34 @@ services:
       - pcp-network
     restart: "no"
 
-  # Control Plane (waits for migrations to complete)
+  # Shared PCP Node (multi-tenant mode)
+  # All users share this single node, scoped by X-User-Id header
+  pcp-node:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: pcp-node
+    restart: unless-stopped
+    environment:
+      # Enable multi-tenant mode
+      PCP_MULTI_TENANT: "true"
+      PCP_DATA_DIR: /data
+      PCP_NODE_ID: pcp://shared
+      PCP_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      # Anthropic API key for reflect operation
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - pcp-shared-data:/data
+    networks:
+      - pcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Control Plane (waits for migrations and pcp-node to be ready)
   control-plane:
     build:
       context: ..
@@ -76,6 +109,8 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      pcp-node:
+        condition: service_healthy
     environment:
       # Database
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pcp}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pcp_hosted}
@@ -89,20 +124,20 @@ services:
       PCP_DOMAIN: ${PCP_DOMAIN:?PCP_DOMAIN is required}
       PCP_IMAGE: ${PCP_IMAGE:-pcp:latest}
 
-      # Docker socket for container management
-      DOCKER_HOST: unix:///var/run/docker.sock
+      # Multi-tenant mode settings
+      MULTI_TENANT: "true"
+      SHARED_NODE_URL: http://pcp-node:6001
 
       # Server settings
       PCP_HOST: "0.0.0.0"
       PCP_PORT: "8000"
       DEBUG: ${DEBUG:-false}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # No Docker socket needed in multi-tenant mode
     networks:
       - pcp-network
     labels:
       - "traefik.enable=true"
-      # Main site
+      # Main site (control plane dashboard)
       - "traefik.http.routers.control-plane.rule=Host(`${PCP_DOMAIN}`)"
       - "traefik.http.routers.control-plane.entrypoints=websecure"
       - "traefik.http.routers.control-plane.tls=true"
@@ -117,3 +152,4 @@ networks:
 volumes:
   postgres-data:
   letsencrypt:
+  pcp-shared-data:

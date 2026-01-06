@@ -14,7 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from .tokens import create_token
+from .tokens import TokenStore, create_token
 
 
 def _hash_secret(secret: str) -> str:
@@ -135,12 +135,33 @@ class Grant:
 
 
 class GrantStore:
-    """Persistent storage for grants."""
+    """
+    Persistent storage for grants.
 
-    def __init__(self, data_dir: Path):
-        self.data_dir = data_dir
-        self.grants_file = data_dir / "grants.json"
+    In multi-tenant mode, pass user_id to scope grants to that user's directory.
+    When user_id is None, storage operates in single-tenant mode (backward compatible).
+
+    If token_store is provided, it will be used for token creation in issue_token().
+    Otherwise, the global create_token() function is used (for backward compatibility).
+    """
+
+    def __init__(
+        self,
+        data_dir: Path,
+        user_id: str | None = None,
+        token_store: TokenStore | None = None,
+    ):
+        base_dir = Path(data_dir)
+
+        # In multi-tenant mode, scope to user's directory
+        if user_id:
+            self.data_dir = base_dir / user_id
+        else:
+            self.data_dir = base_dir
+
+        self.grants_file = self.data_dir / "grants.json"
         self._grants: dict[str, Grant] = {}
+        self._token_store = token_store
         self._load()
 
     def _load(self) -> None:
@@ -321,16 +342,29 @@ class GrantStore:
             remaining = timedelta(hours=tier_defaults["token_lifetime_hours"])
 
         # Create token with grant metadata
-        token_string, token = create_token(
-            subject=grant.client_id,
-            scopes=grant.scopes_approved,
-            expires_in=remaining,
-            metadata={
-                "grant_id": grant.grant_id,
-                "trust_tier": grant.trust_tier.value,
-                "client_name": grant.client_name,
-            },
-        )
+        # Use the provided token store if available, otherwise fall back to global
+        if self._token_store:
+            token_string, token = self._token_store.create(
+                subject=grant.client_id,
+                scopes=grant.scopes_approved,
+                expires_in=remaining,
+                metadata={
+                    "grant_id": grant.grant_id,
+                    "trust_tier": grant.trust_tier.value,
+                    "client_name": grant.client_name,
+                },
+            )
+        else:
+            token_string, token = create_token(
+                subject=grant.client_id,
+                scopes=grant.scopes_approved,
+                expires_in=remaining,
+                metadata={
+                    "grant_id": grant.grant_id,
+                    "trust_tier": grant.trust_tier.value,
+                    "client_name": grant.client_name,
+                },
+            )
 
         grant.token_id = token.token_id
         grant.updated_at = datetime.utcnow()
