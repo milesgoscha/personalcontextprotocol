@@ -508,9 +508,18 @@ async def onboarding_step2(
 
     # Trigger provisioning if node is pending
     if node and node.status == NodeStatus.PENDING:
-        from ..routes.nodes import _provision_node_task
+        from ..config import get_settings
+        from ..routes.nodes import _provision_node_multi_tenant, _provision_node_legacy_task
         import asyncio
-        asyncio.create_task(_provision_node_task(node.id, user.id, user.username))
+
+        settings = get_settings()
+        if settings.multi_tenant:
+            # Multi-tenant: instant provisioning
+            await _provision_node_multi_tenant(db, node, user.id, user.username)
+            await db.refresh(node)
+        else:
+            # Legacy: background task
+            asyncio.create_task(_provision_node_legacy_task(node.id, user.id, user.username))
 
     return templates.TemplateResponse(
         "onboarding/step2.html",
