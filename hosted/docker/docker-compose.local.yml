@@ -1,0 +1,32 @@
+# Docker Compose for LOCAL DEVELOPMENT (DB only)
+# Run Postgres in Docker, control plane locally with hot reload
+#
+# Usage:
+#   cd hosted/docker
+#   docker compose -f docker-compose.local.yml up -d
+#   cd ../..
+#   ./scripts/dev.sh
+#
+# Or just: ./scripts/dev.sh (it starts Postgres automatically)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pcp-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pcp
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: pcp_hosted
+    volumes:
+      - postgres-local-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pcp -d pcp_hosted"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-local-data:
