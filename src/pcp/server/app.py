@@ -535,9 +535,41 @@ def create_app(
         )
         return {
             "token": token_string,
+            "token_id": token_obj.token_id,
             "subject": token_obj.subject,
             "expires_at": token_obj.expires_at.isoformat(),
         }
+
+    @app.get("/api/tokens")
+    async def list_tokens_endpoint(token: Token = Depends(require_token)):
+        """List all tokens. Requires admin access."""
+        require_admin(token)
+        ts = get_token_store()
+        tokens = ts.list_tokens()
+        return {
+            "tokens": [
+                {
+                    "token_id": t.token_id,
+                    "subject": t.subject,
+                    "scopes": [str(s) for s in t.scopes],
+                    "issued_at": t.issued_at.isoformat(),
+                    "expires_at": t.expires_at.isoformat(),
+                    "trust_tier": t.trust_tier,
+                }
+                for t in tokens
+            ],
+            "count": len(tokens),
+        }
+
+    @app.delete("/api/tokens/{token_id}")
+    async def revoke_token_endpoint(token_id: str, token: Token = Depends(require_token)):
+        """Revoke a token by ID. Requires admin access."""
+        require_admin(token)
+        ts = get_token_store()
+        success = ts.revoke(token_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Token not found")
+        return {"status": "revoked", "token_id": token_id}
 
     # Grant management endpoints
 

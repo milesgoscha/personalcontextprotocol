@@ -249,6 +249,45 @@ class NodeClient:
         except httpx.RequestError as e:
             raise NodeUnreachableError(f"Cannot reach node: {e}")
 
+    async def list_tokens(self) -> list[dict[str, Any]]:
+        """List all tokens on the node.
+
+        Returns:
+            List of token objects with id, subject, scopes, dates, etc.
+        """
+        try:
+            response = await self.client.get("/api/tokens")
+            response.raise_for_status()
+            return response.json().get("tokens", [])
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise NodeAuthError("Admin token invalid or expired")
+            raise NodeClientError(f"Failed to list tokens: {e}")
+        except httpx.RequestError as e:
+            raise NodeUnreachableError(f"Cannot reach node: {e}")
+
+    async def revoke_token(self, token_id: str) -> dict[str, Any]:
+        """Revoke a token by ID.
+
+        Args:
+            token_id: The token ID to revoke.
+
+        Returns:
+            Response with status and token_id.
+        """
+        try:
+            response = await self.client.delete(f"/api/tokens/{token_id}")
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise NodeAuthError("Admin token invalid or expired")
+            if e.response.status_code == 404:
+                raise NodeClientError(f"Token {token_id} not found")
+            raise NodeClientError(f"Failed to revoke token: {e}")
+        except httpx.RequestError as e:
+            raise NodeUnreachableError(f"Cannot reach node: {e}")
+
     async def get_audit_log(
         self,
         limit: int = 100,

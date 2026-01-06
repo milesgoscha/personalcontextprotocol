@@ -275,6 +275,160 @@ async def revoke_grant(
 # --- Token Routes ---
 
 
+class TokenInfo(BaseModel):
+    """Token metadata from the node."""
+
+    token_id: str
+    subject: str
+    scopes: list[str]
+    issued_at: str
+    expires_at: str
+    trust_tier: str
+
+
+@router.get("/tokens", response_class=HTMLResponse)
+async def list_tokens(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> HTMLResponse:
+    """Get all tokens from the user's node. Returns HTML for HTMX."""
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
+
+    try:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
+            tokens = await client.list_tokens()
+
+            if not tokens:
+                return HTMLResponse(content='''
+                    <div class="p-6 text-center text-surface-500">
+                        <svg class="w-12 h-12 mx-auto text-surface-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                        <p class="text-sm font-medium">No active tokens</p>
+                        <p class="text-xs mt-1">Create a token below to get started</p>
+                    </div>
+                ''')
+
+            # Build HTML for each token
+            rows = []
+            for t in tokens:
+                # Parse dates
+                from datetime import datetime
+                try:
+                    issued = datetime.fromisoformat(t['issued_at'].replace('Z', '+00:00'))
+                    expires = datetime.fromisoformat(t['expires_at'].replace('Z', '+00:00'))
+                    issued_str = issued.strftime('%b %d, %Y')
+                    expires_str = expires.strftime('%b %d, %Y')
+                except:
+                    issued_str = t.get('issued_at', 'Unknown')[:10]
+                    expires_str = t.get('expires_at', 'Unknown')[:10]
+
+                # Truncate token_id for display
+                token_id = t['token_id']
+                token_preview = f"pcp_{token_id[:8]}..."
+
+                # Format scopes
+                scopes = t.get('scopes', [])
+                if len(scopes) > 2:
+                    scopes_str = f"{scopes[0]}, {scopes[1]} +{len(scopes)-2} more"
+                else:
+                    scopes_str = ", ".join(scopes) if scopes else "None"
+
+                row = f'''
+                <div class="px-6 py-4 flex items-center justify-between hover:bg-surface-50 transition-colors" id="token-row-{token_id}">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-accent-100 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-surface-900 truncate">{t['subject']}</p>
+                                <p class="text-xs text-surface-400 font-mono">{token_preview}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden sm:block flex-shrink-0 w-40 text-left">
+                        <p class="text-xs text-surface-500 truncate" title="{scopes_str}">{scopes_str}</p>
+                    </div>
+                    <div class="hidden md:block flex-shrink-0 w-28 text-left">
+                        <p class="text-xs text-surface-500">{issued_str}</p>
+                    </div>
+                    <div class="flex-shrink-0 w-28 text-left">
+                        <p class="text-xs text-surface-500">{expires_str}</p>
+                    </div>
+                    <div class="flex-shrink-0 ml-4">
+                        <button type="button"
+                                hx-delete="/api/v1/node/tokens/{token_id}"
+                                hx-target="#token-row-{token_id}"
+                                hx-swap="outerHTML"
+                                hx-confirm="Revoke this token? This action cannot be undone."
+                                class="p-1.5 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                '''
+                rows.append(row)
+
+            # Add header row
+            header = '''
+            <div class="px-6 py-3 bg-surface-50 border-b border-surface-100 flex items-center text-xs font-medium text-surface-500 uppercase tracking-wider">
+                <div class="flex-1 min-w-0">Token</div>
+                <div class="hidden sm:block flex-shrink-0 w-40 text-left">Scopes</div>
+                <div class="hidden md:block flex-shrink-0 w-28 text-left">Created</div>
+                <div class="flex-shrink-0 w-28 text-left">Expires</div>
+                <div class="flex-shrink-0 w-10"></div>
+            </div>
+            '''
+
+            return HTMLResponse(content=header + ''.join(rows))
+
+    except NodeAuthError:
+        return HTMLResponse(
+            content='<div class="p-6 text-center text-red-600">Session expired. Please refresh the page.</div>',
+            status_code=401,
+        )
+    except NodeClientError as e:
+        return HTMLResponse(
+            content=f'<div class="p-6 text-center text-red-600">Failed to load tokens: {e}</div>',
+            status_code=502,
+        )
+
+
+@router.delete("/tokens/{token_id}", response_class=HTMLResponse)
+async def revoke_token(
+    token_id: str,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> HTMLResponse:
+    """Revoke a token by ID. Returns HTML for HTMX integration."""
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
+
+    try:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
+            await client.revoke_token(token_id)
+            # Return empty string - HTMX will remove the row via hx-swap="delete"
+            return HTMLResponse(content="", status_code=200)
+    except NodeAuthError:
+        return HTMLResponse(
+            content='<div class="text-red-600 text-sm">Session expired. Please refresh.</div>',
+            status_code=401,
+        )
+    except NodeClientError as e:
+        return HTMLResponse(
+            content=f'<div class="text-red-600 text-sm">Failed to revoke: {e}</div>',
+            status_code=400,
+        )
+
+
 @router.post("/token", response_class=HTMLResponse)
 async def create_token(
     current_user: CurrentUser,
