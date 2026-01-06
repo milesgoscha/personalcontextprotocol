@@ -335,8 +335,32 @@ def create_app(
         return ops
 
     # Token verification dependencies (defined here to access user-scoped token store)
-    async def get_token(authorization: str | None = Header(None)) -> Token | None:
-        """Extract and verify token from Authorization header."""
+    async def get_token(
+        request: Request,
+        authorization: str | None = Header(None),
+    ) -> Token | None:
+        """Extract and verify token from Authorization header.
+
+        In multi-tenant mode, requests with X-User-Id header from the control plane
+        are treated as admin requests (synthetic admin token is returned).
+        """
+        # In multi-tenant mode, check for control plane admin access
+        if Config.MULTI_TENANT:
+            x_user_id = request.headers.get("X-User-Id")
+            # If we have X-User-Id but no Authorization, this is a control plane request
+            # Control plane has already authenticated the user via session cookies
+            if x_user_id and not authorization:
+                from datetime import datetime, timedelta, UTC
+                # Return a synthetic admin token for control plane requests
+                return Token(
+                    token_id="control-plane",
+                    subject="control-plane",
+                    scopes=["pcp:admin"],
+                    issued_at=datetime.now(UTC),
+                    expires_at=datetime.now(UTC) + timedelta(hours=1),
+                    trust_tier="local",
+                )
+
         if not authorization:
             return None
 
