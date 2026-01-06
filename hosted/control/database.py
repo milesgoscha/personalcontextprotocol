@@ -64,6 +64,28 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Context manager for database sessions outside of FastAPI routes.
+
+    Usage:
+        async with get_db_session() as db:
+            result = await db.execute(...)
+    """
+    factory = get_session_factory()
+    async with factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
 async def init_db() -> None:
     """
     Initialize database tables.
