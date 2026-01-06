@@ -1,11 +1,9 @@
 # Traefik static configuration for PCP Hosted Service
-# This file configures the main Traefik settings
 
 api:
   dashboard: true
-  insecure: false  # Dashboard requires authentication in production
+  insecure: false
 
-# Entry points
 entryPoints:
   web:
     address: ":80"
@@ -18,50 +16,36 @@ entryPoints:
 
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: letsencrypt
-        domains:
-          - main: "{{ env \"PCP_DOMAIN\" }}"
-            sans:
-              - "*.{{ env \"PCP_DOMAIN\" }}"
 
-# Certificate resolvers
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: "{{ env \"ACME_EMAIL\" }}"
+      email: mgoscha@gmail.com
       storage: /letsencrypt/acme.json
-      # Use DNS challenge for wildcard certs
       dnsChallenge:
-        provider: "{{ env \"DNS_PROVIDER\" }}"
-        delayBeforeCheck: 0
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
 
-# Providers
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
     network: pcp-network
     watch: true
-
   file:
     filename: /etc/traefik/dynamic.yml
     watch: true
 
-# Logging
 log:
-  level: INFO
+  level: DEBUG
   format: json
 
 accessLog:
   format: json
-  filters:
-    statusCodes:
-      - "200-299"
-      - "400-599"
-
-# Metrics (optional - for monitoring)
-# metrics:
-#   prometheus:
-#     entryPoint: metrics
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        Host: keep
