@@ -655,6 +655,74 @@ def create_app(
             headers={"Content-Disposition": "attachment; filename=pcp-export.jsonl"}
         )
 
+    # Import endpoint
+
+    @app.post("/api/import")
+    async def import_objects(
+        request: Request,
+        merge: bool = True,
+        token: Token = Depends(require_token),
+    ):
+        """
+        Import objects from JSONL data.
+
+        Requires admin access. Accepts newline-delimited JSON objects.
+        Each object must have an envelope with at least 'type' field.
+
+        Query params:
+            merge: If true (default), existing objects are updated.
+                   If false, existing objects are skipped.
+        """
+        import json
+
+        require_admin(token)
+
+        body = await request.body()
+        lines = body.decode("utf-8").strip().split("\n")
+
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for i, line in enumerate(lines):
+            if not line.strip():
+                continue
+
+            try:
+                obj = json.loads(line)
+
+                # Validate structure
+                envelope = obj.get("envelope")
+                if not envelope:
+                    errors.append({"line": i + 1, "error": "Missing envelope"})
+                    continue
+
+                if not envelope.get("type"):
+                    errors.append({"line": i + 1, "error": "Missing envelope.type"})
+                    continue
+
+                # Check if object already exists
+                obj_id = envelope.get("id")
+                if obj_id and obj_id in storage._objects:
+                    if merge:
+                        storage.store(obj)
+                        imported += 1
+                    else:
+                        skipped += 1
+                else:
+                    storage.store(obj)
+                    imported += 1
+
+            except json.JSONDecodeError as e:
+                errors.append({"line": i + 1, "error": f"Invalid JSON: {e}"})
+
+        return {
+            "imported": imported,
+            "skipped": skipped,
+            "errors": errors[:10],  # Limit error details
+            "total_errors": len(errors),
+        }
+
     # Health check
 
     @app.get("/health")

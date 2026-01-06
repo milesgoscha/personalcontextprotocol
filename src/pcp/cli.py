@@ -589,6 +589,59 @@ def export_data(obj_type, output, url):
         click.echo(f"Error: {e}")
 
 
+# Import command
+
+@main.command("import")
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--merge/--no-merge", default=True, help="Merge with existing objects (default: merge)")
+@click.option("--url", default="http://localhost:6001", help="PCP node URL")
+def import_data(file, merge, url):
+    """Import objects from a JSONL file."""
+    import httpx
+
+    try:
+        with open(file, "r") as f:
+            data = f.read()
+
+        line_count = len([l for l in data.strip().split("\n") if l.strip()])
+        click.echo(f"Importing {line_count} objects from {file}...")
+
+        with httpx.Client(base_url=url, timeout=60.0) as client:
+            # Get admin token
+            resp = client.post("/api/token", json={
+                "subject": "cli-admin",
+                "scopes": ["pcp:admin"],
+                "hours": 1,
+            })
+            resp.raise_for_status()
+            token = resp.json()["token"]
+
+            resp = client.post(
+                "/api/import",
+                params={"merge": merge},
+                content=data,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/x-ndjson",
+                },
+            )
+            resp.raise_for_status()
+            result = resp.json()
+
+            click.echo(f"Imported: {result['imported']}")
+            if result['skipped']:
+                click.echo(f"Skipped: {result['skipped']}")
+            if result['total_errors']:
+                click.echo(f"Errors: {result['total_errors']}")
+                for err in result['errors']:
+                    click.echo(f"  Line {err['line']}: {err['error']}")
+
+    except httpx.ConnectError:
+        click.echo(f"Could not connect to {url} - is the server running?")
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
 # Status command
 
 @main.command()
