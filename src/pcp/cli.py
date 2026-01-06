@@ -461,6 +461,134 @@ def grants_revoke(grant_id, url):
         click.echo(f"Error: {e}")
 
 
+# Audit commands
+
+@main.group()
+def audit():
+    """View audit logs."""
+    pass
+
+
+@audit.command("list")
+@click.option("--operation", "-o", help="Filter by operation type (query, observe, learn, reflect)")
+@click.option("--requester", "-r", help="Filter by requester")
+@click.option("--since", help="Show events after (ISO datetime)")
+@click.option("--limit", "-l", default=20, help="Max events to show")
+@click.option("--url", default="http://localhost:6001", help="PCP node URL")
+def audit_list(operation, requester, since, limit, url):
+    """List recent audit events."""
+    import httpx
+
+    try:
+        with httpx.Client(base_url=url, timeout=10.0) as client:
+            # Get admin token
+            resp = client.post("/api/token", json={
+                "subject": "cli-admin",
+                "scopes": ["pcp:admin"],
+                "hours": 1,
+            })
+            resp.raise_for_status()
+            token = resp.json()["token"]
+
+            # Query audit
+            params = {"limit": limit}
+            if operation:
+                params["operation"] = operation
+            if requester:
+                params["requester"] = requester
+            if since:
+                params["since"] = since
+
+            resp = client.get(
+                "/api/audit",
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            resp.raise_for_status()
+            result = resp.json()
+
+            if not result["events"]:
+                click.echo("No audit events found")
+                return
+
+            click.echo(f"Audit events ({result['count']} of {result['total']}):")
+            for event in result["events"]:
+                payload = event.get("payload", {})
+                detail = payload.get("detail", {})
+                ts = payload.get("timestamp", "")[:19]
+                op = detail.get("operation", "?")
+                req = detail.get("requester", "?")
+                success = "ok" if detail.get("success") else "FAIL"
+                count = detail.get("result_count")
+                count_str = f" ({count} results)" if count is not None else ""
+
+                click.echo(f"  [{ts}] {op} by {req} - {success}{count_str}")
+
+            if result["has_more"]:
+                click.echo(f"\n  ... and more (use --limit to see more)")
+
+    except httpx.ConnectError:
+        click.echo(f"Could not connect to {url} - is the server running?")
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# Export command
+
+@main.command("export")
+@click.option("--type", "-t", "obj_type", help="Filter by object type (event, learning, reflection)")
+@click.option("--output", "-o", type=click.Path(), help="Output file (default: stdout)")
+@click.option("--url", default="http://localhost:6001", help="PCP node URL")
+def export_data(obj_type, output, url):
+    """Export all objects as JSONL."""
+    import httpx
+
+    try:
+        with httpx.Client(base_url=url, timeout=60.0) as client:
+            # Get admin token
+            resp = client.post("/api/token", json={
+                "subject": "cli-admin",
+                "scopes": ["pcp:admin"],
+                "hours": 1,
+            })
+            resp.raise_for_status()
+            token = resp.json()["token"]
+
+            params = {"type": obj_type} if obj_type else {}
+
+            with client.stream(
+                "GET",
+                "/api/export",
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            ) as resp:
+                resp.raise_for_status()
+
+                out = open(output, "w") if output else None
+                try:
+                    count = 0
+                    for line in resp.iter_lines():
+                        if line:
+                            if out:
+                                out.write(line + "\n")
+                            else:
+                                click.echo(line)
+                            count += 1
+                finally:
+                    if out:
+                        out.close()
+
+            if output:
+                click.echo(f"Exported {count} objects to {output}", err=True)
+            else:
+                click.echo(f"\n# Exported {count} objects", err=True)
+
+    except httpx.ConnectError:
+        click.echo(f"Could not connect to {url} - is the server running?")
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
 # Status command
 
 @main.command()

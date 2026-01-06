@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+
+{% block body %}
 <!-- Documentation-style sidebar navigation -->
 <div class="flex h-screen" x-data="{ sidebarOpen: false }">
     <!-- Mobile sidebar backdrop -->
@@ -183,8 +186,9 @@
         </header>
 
         <!-- Page content -->
-        <main class="flex-1 overflow-y-auto">
+        <main class="flex-1 overflow-y-auto bg-surface-50">
             {% block page_content %}{% endblock %}
         </main>
     </div>
 </div>
+{% endblock %}

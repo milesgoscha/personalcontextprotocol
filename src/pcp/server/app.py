@@ -5,11 +5,76 @@ Exposes PCP operations over HTTP with proper auth handling.
 """
 
 import os
+from collections import defaultdict
 from pathlib import Path
+from time import time
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from datetime import datetime
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+
+
+# Rate limiting
+class RateLimiter:
+    """Simple in-memory rate limiter."""
+
+    def __init__(self, requests_per_minute: int = 60):
+        self.rpm = requests_per_minute
+        self.requests: dict[str, list[float]] = defaultdict(list)
+
+    def is_allowed(self, key: str, limit: int | None = None) -> bool:
+        """Check if request is allowed, returns False if rate limited."""
+        now = time()
+        window_start = now - 60
+        max_requests = limit or self.rpm
+
+        # Clean old requests
+        self.requests[key] = [t for t in self.requests[key] if t > window_start]
+
+        if len(self.requests[key]) >= max_requests:
+            return False
+
+        self.requests[key].append(now)
+        return True
+
+
+_rate_limiter = RateLimiter(requests_per_minute=60)
+
+# Endpoints with stricter limits (prevent abuse of token/grant creation)
+STRICT_RATE_LIMIT_PATHS = {
+    "/api/token": 10,          # 10 token creations per minute
+    "/api/grants/request": 10,  # 10 grant requests per minute
+}
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Rate limiting middleware."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Determine rate limit key (token subject or IP)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            # Use first 16 chars of token as key
+            key = f"token:{auth_header[7:23]}"
+        else:
+            # Use client IP
+            key = f"ip:{request.client.host if request.client else 'unknown'}"
+
+        # Check for stricter limits on certain paths
+        path = request.url.path
+        limit = STRICT_RATE_LIMIT_PATHS.get(path)
+
+        if not _rate_limiter.is_allowed(key, limit):
+            return StreamingResponse(
+                content=iter([b'{"detail": "Rate limit exceeded. Try again later."}']),
+                status_code=429,
+                media_type="application/json",
+            )
+
+        return await call_next(request)
 
 from pcp.auth.grants import Grant, GrantStatus, GrantStore, TrustTier
 from pcp.auth.scopes import Operation, validate_scope
@@ -85,6 +150,22 @@ async def require_token(token: Token | None = Depends(get_token)) -> Token:
     return token
 
 
+def has_admin_access(token: Token) -> bool:
+    """
+    Check if token has admin access.
+
+    Admin access is granted if:
+    - Token has pcp:admin scope, OR
+    - Token is from local trust tier (auto-approved local agents)
+    """
+    has_admin_scope = any(
+        str(s) == "pcp:admin" or str(s).startswith("pcp:admin")
+        for s in token.scopes
+    )
+    is_local = token.trust_tier == "local"
+    return has_admin_scope or is_local
+
+
 def require_admin(token: Token) -> None:
     """
     Require admin access for grant management operations.
@@ -98,13 +179,7 @@ def require_admin(token: Token) -> None:
     trusted. If we ever need "local but sandboxed" agents, this should be
     changed to require explicit pcp:admin scope even for local tokens.
     """
-    has_admin_scope = any(
-        str(s) == "pcp:admin" or str(s).startswith("pcp:admin")
-        for s in token.scopes
-    )
-    is_local = token.trust_tier == "local"
-
-    if not has_admin_scope and not is_local:
+    if not has_admin_access(token):
         raise HTTPException(
             status_code=403,
             detail="Admin access required (pcp:admin scope or local trust tier)"
@@ -144,6 +219,9 @@ def create_app(
         description="Personal Context Protocol Node Server",
         version="0.1.0",
     )
+
+    # Add rate limiting middleware
+    app.add_middleware(RateLimitMiddleware)
 
     @app.get("/")
     async def root():
@@ -484,6 +562,98 @@ def create_app(
             "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
             "trust_tier": grant.trust_tier.value,
         }
+
+    # Audit endpoint
+
+    @app.get("/api/audit")
+    async def list_audit_events(
+        operation: str | None = None,
+        requester: str | None = None,
+        since: str | None = None,
+        before: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        token: Token = Depends(require_token),
+    ):
+        """
+        List audit events.
+
+        - Admin users can query all events
+        - Non-admin users can only query their own events (requester = token.subject)
+        """
+        from pcp.auth.audit import get_audit_log
+
+        is_admin = has_admin_access(token)
+
+        # Non-admins can only query their own history
+        if not is_admin:
+            if requester and requester != token.subject:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Can only query your own audit history"
+                )
+            requester = token.subject  # Force filter to own events
+
+        audit_log = get_audit_log()
+
+        # Parse time filters
+        since_dt = datetime.fromisoformat(since) if since else None
+        before_dt = datetime.fromisoformat(before) if before else None
+
+        # Query with filters
+        events = audit_log.query(
+            operation=operation,
+            requester=requester,
+            since=since_dt,
+            limit=limit + offset,  # Get extra for offset handling
+        )
+
+        # Apply before filter
+        if before_dt:
+            events = [e for e in events if e.timestamp <= before_dt]
+
+        # Apply pagination
+        total = len(events)
+        paginated = events[offset:offset + limit]
+
+        return {
+            "events": [e.to_pcp_event() for e in paginated],
+            "count": len(paginated),
+            "total": total,
+            "has_more": total > offset + limit,
+        }
+
+    # Export endpoint
+
+    @app.get("/api/export")
+    async def export_objects(
+        type: str | None = None,
+        token: Token = Depends(require_token),
+    ):
+        """
+        Export all objects as streaming JSONL.
+
+        Requires admin access. Returns all objects (or filtered by type)
+        as newline-delimited JSON for data portability.
+        """
+        import json
+
+        require_admin(token)
+
+        async def generate():
+            for obj_id, obj in storage._objects.items():
+                # Filter by type if specified
+                if type:
+                    obj_type = obj.get("envelope", {}).get("type")
+                    if obj_type != type:
+                        continue
+                yield json.dumps(obj) + "\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": "attachment; filename=pcp-export.jsonl"}
+        )
 
     # Health check
 

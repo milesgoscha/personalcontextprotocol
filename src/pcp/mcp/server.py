@@ -28,6 +28,17 @@ from pcp.server.operations import PCPOperations
 from pcp.server.storage import Storage
 
 
+def make_error_response(error: Exception, operation: str) -> str:
+    """Create a structured error response for MCP tools."""
+    error_type = type(error).__name__
+    return json.dumps({
+        "error": True,
+        "error_type": error_type,
+        "message": str(error),
+        "operation": operation,
+    }, indent=2)
+
+
 # Initialize PCP backend
 DATA_DIR = Path.home() / ".pcp" / "data"
 storage = Storage(data_dir=DATA_DIR)
@@ -55,8 +66,11 @@ mcp = FastMCP("pcp")
 @mcp.tool()
 def pcp_describe() -> str:
     """Get PCP node capabilities and schema versions."""
-    result = ops.describe(_token)
-    return json.dumps(result, indent=2, default=str)
+    try:
+        result = ops.describe(_token)
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return make_error_response(e, "describe")
 
 
 @mcp.tool()
@@ -69,33 +83,36 @@ def pcp_query(
     summarize: Annotated[bool, "Return LLM-generated summary instead of raw items"] = False,
 ) -> str:
     """Query personal context (events, learnings, reflections, identity)."""
-    # Map type names to object_types
-    type_map = {
-        "identity": ["identity"],
-        "events": ["event"],
-        "learnings": ["learning"],
-        "reflections": ["reflection"],
-    }
-    object_types = type_map.get(type, [type])
+    try:
+        # Map type names to object_types
+        type_map = {
+            "identity": ["identity"],
+            "events": ["event"],
+            "learnings": ["learning"],
+            "reflections": ["reflection"],
+        }
+        object_types = type_map.get(type, [type])
 
-    # Build timerange if provided
-    timerange = None
-    if after or before:
-        timerange = {}
-        if after:
-            timerange["after"] = after
-        if before:
-            timerange["before"] = before
+        # Build timerange if provided
+        timerange = None
+        if after or before:
+            timerange = {}
+            if after:
+                timerange["after"] = after
+            if before:
+                timerange["before"] = before
 
-    result = ops.query(
-        token=_token,
-        object_types=object_types,
-        disclosure=disclosure,
-        timerange=timerange,
-        limit=limit,
-        summarize=summarize,
-    )
-    return json.dumps(result, indent=2, default=str)
+        result = ops.query(
+            token=_token,
+            object_types=object_types,
+            disclosure=disclosure,
+            timerange=timerange,
+            limit=limit,
+            summarize=summarize,
+        )
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return make_error_response(e, "query")
 
 
 @mcp.tool()
@@ -106,20 +123,23 @@ def pcp_observe(
     tags: Annotated[list[str] | None, "Classification tags"] = None,
 ) -> str:
     """Record an event observation into the user's personal context."""
-    event = {
-        "envelope": {
-            "type": "event",
-            "tags": tags or [],
-        },
-        "payload": {
-            "event_kind": event_kind,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "summary": summary,
-            "detail": detail or {},
-        },
-    }
-    result = ops.observe(token=_token, objects=[event])
-    return json.dumps(result, indent=2, default=str)
+    try:
+        event = {
+            "envelope": {
+                "type": "event",
+                "tags": tags or [],
+            },
+            "payload": {
+                "event_kind": event_kind,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "summary": summary,
+                "detail": detail or {},
+            },
+        }
+        result = ops.observe(token=_token, objects=[event])
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return make_error_response(e, "observe")
 
 
 @mcp.tool()
@@ -130,14 +150,17 @@ def pcp_learn(
     category: Annotated[str | None, "Category: preferences, patterns, or facts"] = None,
 ) -> str:
     """Store or update a durable fact about the user."""
-    result = ops.learn(
-        token=_token,
-        key=key,
-        statement=statement,
-        confidence=confidence,
-        category=category,
-    )
-    return json.dumps(result, indent=2, default=str)
+    try:
+        result = ops.learn(
+            token=_token,
+            key=key,
+            statement=statement,
+            confidence=confidence,
+            category=category,
+        )
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return make_error_response(e, "learn")
 
 
 @mcp.tool()
@@ -149,22 +172,25 @@ def pcp_reflect(
     save: Annotated[bool, "Save the reflection to PCP for future reference"] = False,
 ) -> str:
     """Generate a synthesis/reflection over personal context using Claude."""
-    horizon = None
-    if start or end:
-        horizon = {}
-        if start:
-            horizon["start"] = start
-        if end:
-            horizon["end"] = end
+    try:
+        horizon = None
+        if start or end:
+            horizon = {}
+            if start:
+                horizon["start"] = start
+            if end:
+                horizon["end"] = end
 
-    result = ops.reflect(
-        token=_token,
-        prompt=prompt,
-        scope=scope,
-        horizon=horizon,
-        save=save,
-    )
-    return json.dumps(result, indent=2, default=str)
+        result = ops.reflect(
+            token=_token,
+            prompt=prompt,
+            scope=scope,
+            horizon=horizon,
+            save=save,
+        )
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return make_error_response(e, "reflect")
 
 
 if __name__ == "__main__":

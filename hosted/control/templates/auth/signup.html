@@ -32,71 +32,163 @@
             </div>
             {% endif %}
 
-            <form class="space-y-6" action="/signup" method="POST" hx-boost="false" x-data="{ username: '' }">
+            <form class="space-y-6" action="/signup" method="POST" hx-boost="false"
+                  x-data="{
+                      email: '{{ email or '' }}',
+                      username: '{{ username or '' }}',
+                      password: '',
+                      passwordConfirm: '',
+                      touched: { email: false, username: false, password: false, passwordConfirm: false },
+                      submitting: false,
+                      get emailValid() { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email) },
+                      get usernameValid() { return /^[a-z][a-z0-9\-]*[a-z0-9]$/.test(this.username) && this.username.length >= 3 },
+                      get passwordValid() { return this.password.length >= 8 },
+                      get passwordsMatch() { return this.password === this.passwordConfirm && this.passwordConfirm.length > 0 },
+                      get formValid() { return this.emailValid && this.usernameValid && this.passwordValid && this.passwordsMatch }
+                  }"
+                  @submit="submitting = true">
+
+                <!-- Email -->
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
-                    <div class="mt-1">
+                    <div class="mt-1 relative">
                         <input id="email"
                                name="email"
                                type="email"
                                autocomplete="email"
                                required
-                               value="{{ email or '' }}"
-                               class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
+                               x-model="email"
+                               @blur="touched.email = true"
+                               :class="touched.email && !emailValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
+                        <!-- Success checkmark -->
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                             x-show="touched.email && emailValid" x-cloak>
+                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
                     </div>
+                    <p class="mt-1 text-xs text-red-600" x-show="touched.email && !emailValid" x-cloak>
+                        Please enter a valid email address
+                    </p>
                 </div>
 
+                <!-- Username -->
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                    <div class="mt-1">
+                    <div class="mt-1 relative">
                         <input id="username"
                                name="username"
                                type="text"
                                autocomplete="username"
                                required
-                               pattern="[a-z][a-z0-9\-]*[a-z0-9]"
                                minlength="3"
                                maxlength="63"
                                x-model="username"
-                               value="{{ username or '' }}"
-                               class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
+                               @blur="touched.username = true"
+                               @input="username = username.toLowerCase().replace(/[^a-z0-9-]/g, '')"
+                               :class="touched.username && !usernameValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm"
                                placeholder="yourname">
+                        <!-- Success checkmark -->
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                             x-show="touched.username && usernameValid" x-cloak>
+                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">
-                        Your node will be available at <span class="font-mono text-primary-600" x-text="username ? username + '.{{ domain }}' : 'yourname.{{ domain }}'"></span>
+                    <p class="mt-1 text-xs" :class="touched.username && !usernameValid ? 'text-red-600' : 'text-gray-500'">
+                        <span x-show="!touched.username || usernameValid">
+                            Your node will be at <span class="font-mono text-primary-600" x-text="username ? username + '.{{ domain }}' : 'yourname.{{ domain }}'"></span>
+                        </span>
+                        <span x-show="touched.username && !usernameValid" x-cloak>
+                            3+ characters, lowercase letters, numbers, and hyphens only
+                        </span>
                     </p>
                 </div>
 
+                <!-- Password -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <div class="mt-1">
+                    <div class="mt-1 relative">
                         <input id="password"
                                name="password"
                                type="password"
                                autocomplete="new-password"
                                required
                                minlength="8"
-                               class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
+                               x-model="password"
+                               @blur="touched.password = true"
+                               :class="touched.password && !passwordValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
+                        <!-- Success checkmark -->
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                             x-show="touched.password && passwordValid" x-cloak>
+                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">At least 8 characters</p>
+                    <!-- Password strength indicator -->
+                    <div class="mt-2">
+                        <div class="flex gap-1">
+                            <div class="h-1 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 1 ? (password.length >= 12 ? 'bg-green-500' : password.length >= 8 ? 'bg-yellow-500' : 'bg-red-400') : 'bg-gray-200'"></div>
+                            <div class="h-1 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 8 ? (password.length >= 12 ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200'"></div>
+                            <div class="h-1 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 12 ? 'bg-green-500' : 'bg-gray-200'"></div>
+                        </div>
+                        <p class="mt-1 text-xs" :class="touched.password && !passwordValid ? 'text-red-600' : 'text-gray-500'">
+                            <span x-show="password.length === 0">At least 8 characters required</span>
+                            <span x-show="password.length > 0 && password.length < 8" x-cloak><span x-text="password.length"></span> / 8 characters</span>
+                            <span x-show="password.length >= 8 && password.length < 12" x-cloak class="text-yellow-600">Good password</span>
+                            <span x-show="password.length >= 12" x-cloak class="text-green-600">Strong password</span>
+                        </p>
+                    </div>
                 </div>
 
+                <!-- Confirm Password -->
                 <div>
                     <label for="password_confirm" class="block text-sm font-medium text-gray-700">Confirm password</label>
-                    <div class="mt-1">
+                    <div class="mt-1 relative">
                         <input id="password_confirm"
                                name="password_confirm"
                                type="password"
                                autocomplete="new-password"
                                required
-                               class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
+                               x-model="passwordConfirm"
+                               @blur="touched.passwordConfirm = true"
+                               :class="touched.passwordConfirm && !passwordsMatch ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
+                        <!-- Success checkmark -->
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                             x-show="touched.passwordConfirm && passwordsMatch" x-cloak>
+                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
                     </div>
+                    <p class="mt-1 text-xs text-red-600" x-show="touched.passwordConfirm && !passwordsMatch" x-cloak>
+                        Passwords don't match
+                    </p>
                 </div>
 
                 <div>
                     <button type="submit"
-                            class="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                        Create account
+                            :disabled="!formValid || submitting"
+                            :class="formValid && !submitting ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-300 cursor-not-allowed'"
+                            class="flex w-full justify-center rounded-md border border-transparent py-2.5 px-4 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+                        <span x-show="!submitting">Create account</span>
+                        <span x-show="submitting" x-cloak class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Creating account...
+                        </span>
                     </button>
                 </div>
             </form>

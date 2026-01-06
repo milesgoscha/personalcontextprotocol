@@ -47,7 +47,7 @@ class Storage:
         self._load()
 
     def _load(self) -> None:
-        """Load objects from disk."""
+        """Load objects from disk, handling tombstones for deleted objects."""
         objects_file = self.data_dir / "objects.jsonl"
         if objects_file.exists():
             with open(objects_file) as f:
@@ -56,7 +56,13 @@ class Storage:
                         obj = json.loads(line)
                         obj_id = obj.get("envelope", {}).get("id", "")
                         if obj_id:
-                            self._objects[obj_id] = obj
+                            # Check for tombstone marker
+                            if obj.get("envelope", {}).get("__tombstone"):
+                                # Remove from memory if exists (object was deleted)
+                                self._objects.pop(obj_id, None)
+                            else:
+                                # Normal object - last version wins
+                                self._objects[obj_id] = obj
 
         identity_file = self.data_dir / "identity.json"
         if identity_file.exists():
@@ -348,12 +354,56 @@ class Storage:
                 target[key] = value
 
     def delete(self, obj_id: str) -> bool:
-        """Delete an object by ID."""
-        if obj_id in self._objects:
-            del self._objects[obj_id]
-            # Note: doesn't remove from JSONL file (append-only)
-            return True
-        return False
+        """
+        Delete an object by ID using tombstone approach.
+
+        Appends a tombstone record to JSONL so deletion persists across restarts.
+        """
+        if obj_id not in self._objects:
+            return False
+
+        # Remove from memory
+        del self._objects[obj_id]
+
+        # Write tombstone to JSONL for persistence
+        tombstone = {
+            "envelope": {
+                "id": obj_id,
+                "__tombstone": True,
+                "deleted_at": datetime.utcnow().isoformat(),
+            }
+        }
+        self._persist_object(tombstone)
+
+        return True
+
+    def compact(self) -> int:
+        """
+        Compact the JSONL file by rewriting without duplicates and tombstones.
+
+        This removes deleted objects and duplicate versions from the file,
+        keeping only the latest version of each live object.
+
+        Returns the number of entries removed.
+        """
+        objects_file = self.data_dir / "objects.jsonl"
+        if not objects_file.exists():
+            return 0
+
+        # Count original lines
+        with open(objects_file) as f:
+            original_count = sum(1 for line in f if line.strip())
+
+        # Write current state (only live objects)
+        temp_file = self.data_dir / "objects.jsonl.tmp"
+        with open(temp_file, "w") as f:
+            for obj in self._objects.values():
+                f.write(json.dumps(obj) + "\n")
+
+        # Replace original atomically
+        temp_file.replace(objects_file)
+
+        return original_count - len(self._objects)
 
     def count(self, object_types: list[ObjectType] | None = None) -> int:
         """Count objects, optionally filtered by type."""

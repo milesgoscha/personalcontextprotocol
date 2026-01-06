@@ -24,6 +24,18 @@ from starlette.responses import Response
 
 from pcp.auth.tokens import Token, verify_token
 
+
+def make_error_response(error: Exception, operation: str) -> str:
+    """Create a structured error response for MCP tools."""
+    error_type = type(error).__name__
+    return json.dumps({
+        "error": True,
+        "error_type": error_type,
+        "message": str(error),
+        "operation": operation,
+    }, indent=2)
+
+
 # Context variable to store the current request's token
 _current_token: ContextVar[Token | None] = ContextVar("current_token", default=None)
 
@@ -107,9 +119,12 @@ Always start by checking what context is available with pcp_query before making 
     @mcp.tool()
     def pcp_describe() -> str:
         """Get PCP node capabilities and schema versions."""
-        token = get_current_token()
-        result = ops.describe(token)
-        return json.dumps(result, indent=2, default=str)
+        try:
+            token = get_current_token()
+            result = ops.describe(token)
+            return json.dumps(result, indent=2, default=str)
+        except Exception as e:
+            return make_error_response(e, "describe")
 
     @mcp.tool()
     def pcp_query(
@@ -121,35 +136,38 @@ Always start by checking what context is available with pcp_query before making 
         summarize: Annotated[bool, "Return LLM-generated summary instead of raw items"] = False,
     ) -> str:
         """Query personal context (events, learnings, reflections, identity)."""
-        token = get_current_token()
+        try:
+            token = get_current_token()
 
-        # Map type names to object_types
-        type_map = {
-            "identity": ["identity"],
-            "events": ["event"],
-            "learnings": ["learning"],
-            "reflections": ["reflection"],
-        }
-        object_types = type_map.get(type, [type])
+            # Map type names to object_types
+            type_map = {
+                "identity": ["identity"],
+                "events": ["event"],
+                "learnings": ["learning"],
+                "reflections": ["reflection"],
+            }
+            object_types = type_map.get(type, [type])
 
-        # Build timerange if provided
-        timerange = None
-        if after or before:
-            timerange = {}
-            if after:
-                timerange["after"] = after
-            if before:
-                timerange["before"] = before
+            # Build timerange if provided
+            timerange = None
+            if after or before:
+                timerange = {}
+                if after:
+                    timerange["after"] = after
+                if before:
+                    timerange["before"] = before
 
-        result = ops.query(
-            token=token,
-            object_types=object_types,
-            disclosure=disclosure,
-            timerange=timerange,
-            limit=limit,
-            summarize=summarize,
-        )
-        return json.dumps(result, indent=2, default=str)
+            result = ops.query(
+                token=token,
+                object_types=object_types,
+                disclosure=disclosure,
+                timerange=timerange,
+                limit=limit,
+                summarize=summarize,
+            )
+            return json.dumps(result, indent=2, default=str)
+        except Exception as e:
+            return make_error_response(e, "query")
 
     @mcp.tool()
     def pcp_observe(
@@ -159,22 +177,25 @@ Always start by checking what context is available with pcp_query before making 
         tags: Annotated[list[str] | None, "Classification tags"] = None,
     ) -> str:
         """Record an event observation into the user's personal context."""
-        token = get_current_token()
+        try:
+            token = get_current_token()
 
-        event = {
-            "envelope": {
-                "type": "event",
-                "tags": tags or [],
-            },
-            "payload": {
-                "event_kind": event_kind,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "summary": summary,
-                "detail": detail or {},
-            },
-        }
-        result = ops.observe(token=token, objects=[event])
-        return json.dumps(result, indent=2, default=str)
+            event = {
+                "envelope": {
+                    "type": "event",
+                    "tags": tags or [],
+                },
+                "payload": {
+                    "event_kind": event_kind,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "summary": summary,
+                    "detail": detail or {},
+                },
+            }
+            result = ops.observe(token=token, objects=[event])
+            return json.dumps(result, indent=2, default=str)
+        except Exception as e:
+            return make_error_response(e, "observe")
 
     @mcp.tool()
     def pcp_learn(
@@ -184,16 +205,19 @@ Always start by checking what context is available with pcp_query before making 
         category: Annotated[str | None, "Category: preferences, patterns, or facts"] = None,
     ) -> str:
         """Store or update a durable fact about the user."""
-        token = get_current_token()
+        try:
+            token = get_current_token()
 
-        result = ops.learn(
-            token=token,
-            key=key,
-            statement=statement,
-            confidence=confidence,
-            category=category,
-        )
-        return json.dumps(result, indent=2, default=str)
+            result = ops.learn(
+                token=token,
+                key=key,
+                statement=statement,
+                confidence=confidence,
+                category=category,
+            )
+            return json.dumps(result, indent=2, default=str)
+        except Exception as e:
+            return make_error_response(e, "learn")
 
     @mcp.tool()
     def pcp_reflect(
@@ -204,24 +228,27 @@ Always start by checking what context is available with pcp_query before making 
         save: Annotated[bool, "Save the reflection to PCP for future reference"] = False,
     ) -> str:
         """Generate a synthesis/reflection over personal context using Claude."""
-        token = get_current_token()
+        try:
+            token = get_current_token()
 
-        horizon = None
-        if start or end:
-            horizon = {}
-            if start:
-                horizon["start"] = start
-            if end:
-                horizon["end"] = end
+            horizon = None
+            if start or end:
+                horizon = {}
+                if start:
+                    horizon["start"] = start
+                if end:
+                    horizon["end"] = end
 
-        result = ops.reflect(
-            token=token,
-            prompt=prompt,
-            scope=scope,
-            horizon=horizon,
-            save=save,
-        )
-        return json.dumps(result, indent=2, default=str)
+            result = ops.reflect(
+                token=token,
+                prompt=prompt,
+                scope=scope,
+                horizon=horizon,
+                save=save,
+            )
+            return json.dumps(result, indent=2, default=str)
+        except Exception as e:
+            return make_error_response(e, "reflect")
 
     # Get the HTTP app - IMPORTANT: preserve lifespan for session manager init
     http_app = mcp.streamable_http_app()
