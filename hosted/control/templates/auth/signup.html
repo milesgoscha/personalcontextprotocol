@@ -1,38 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}Create Account - PCP Hosted{% endblock %}
+{% block title %}Create Account - PCP{% endblock %}
 
 {% block body %}
-<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 class="text-center text-3xl font-bold text-primary-600">PCP</h1>
-        <h2 class="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
+<div class="min-h-full flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark-950">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+            <img src="/static/img/pcp-logo.svg" alt="PCP" class="w-12 h-12">
+        </div>
+
+        <h1 class="text-center text-xl font-semibold text-dark-100">
             Create your account
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
+        </h1>
+        <p class="mt-2 text-center text-sm text-dark-400">
             Already have an account?
-            <a href="/login" class="font-medium text-primary-600 hover:text-primary-500">Sign in</a>
+            <a href="/login" class="font-medium text-primary-500 hover:text-primary-400">Sign in</a>
         </p>
     </div>
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-sm">
+        <div class="bg-dark-900 py-6 px-5 border border-dark-800 rounded-lg">
             {% if error %}
-            <div class="mb-4 rounded-md bg-red-50 p-4">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-medium text-red-800">{{ error }}</p>
-                    </div>
+            <div class="mb-4 rounded-md border border-red-800/50 bg-red-900/30 p-3">
+                <div class="flex gap-2">
+                    <svg class="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                    </svg>
+                    <p class="text-sm text-red-300">{{ error }}</p>
                 </div>
             </div>
             {% endif %}
 
-            <form class="space-y-6" action="/signup" method="POST" hx-boost="false"
+            <form class="space-y-4" action="/signup" method="POST" hx-boost="false"
                   x-data="{
                       email: '{{ email or '' }}',
                       username: '{{ username or '' }}',
@@ -50,8 +50,8 @@
 
                 <!-- Email -->
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
-                    <div class="mt-1 relative">
+                    <label for="email" class="block text-sm font-medium text-dark-300 mb-1.5">Email address</label>
+                    <div class="relative">
                         <input id="email"
                                name="email"
                                type="email"
@@ -59,25 +59,24 @@
                                required
                                x-model="email"
                                @blur="touched.email = true"
-                               :class="touched.email && !emailValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
-                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
-                        <!-- Success checkmark -->
+                               :class="touched.email && !emailValid ? 'border-red-700 focus:border-red-500 focus:ring-red-500' : 'border-dark-700 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full rounded-md bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 transition-colors">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
                              x-show="touched.email && emailValid" x-cloak>
-                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-1 text-xs text-red-600" x-show="touched.email && !emailValid" x-cloak>
+                    <p class="mt-1 text-xs text-red-400" x-show="touched.email && !emailValid" x-cloak>
                         Please enter a valid email address
                     </p>
                 </div>
 
                 <!-- Username -->
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                    <div class="mt-1 relative">
+                    <label for="username" class="block text-sm font-medium text-dark-300 mb-1.5">Username</label>
+                    <div class="relative">
                         <input id="username"
                                name="username"
                                type="text"
@@ -88,31 +87,30 @@
                                x-model="username"
                                @blur="touched.username = true"
                                @input="username = username.toLowerCase().replace(/[^a-z0-9-]/g, '')"
-                               :class="touched.username && !usernameValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
-                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm"
+                               :class="touched.username && !usernameValid ? 'border-red-700 focus:border-red-500 focus:ring-red-500' : 'border-dark-700 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full rounded-md bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 transition-colors"
                                placeholder="yourname">
-                        <!-- Success checkmark -->
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
                              x-show="touched.username && usernameValid" x-cloak>
-                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-1 text-xs" :class="touched.username && !usernameValid ? 'text-red-600' : 'text-gray-500'">
+                    <p class="mt-1 text-xs" :class="touched.username && !usernameValid ? 'text-red-400' : 'text-dark-500'">
                         <span x-show="!touched.username || usernameValid">
-                            Your node will be at <span class="font-mono text-primary-600" x-text="username ? username + '.{{ domain }}' : 'yourname.{{ domain }}'"></span>
+                            Your node: <span class="font-mono text-primary-500" x-text="username ? username + '.{{ domain }}' : 'yourname.{{ domain }}'"></span>
                         </span>
                         <span x-show="touched.username && !usernameValid" x-cloak>
-                            3+ characters, lowercase letters, numbers, and hyphens only
+                            3+ chars, lowercase letters, numbers, hyphens only
                         </span>
                     </p>
                 </div>
 
                 <!-- Password -->
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <div class="mt-1 relative">
+                    <label for="password" class="block text-sm font-medium text-dark-300 mb-1.5">Password</label>
+                    <div class="relative">
                         <input id="password"
                                name="password"
                                type="password"
@@ -121,39 +119,38 @@
                                minlength="8"
                                x-model="password"
                                @blur="touched.password = true"
-                               :class="touched.password && !passwordValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
-                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
-                        <!-- Success checkmark -->
+                               :class="touched.password && !passwordValid ? 'border-red-700 focus:border-red-500 focus:ring-red-500' : 'border-dark-700 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full rounded-md bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 transition-colors">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
                              x-show="touched.password && passwordValid" x-cloak>
-                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </div>
                     </div>
-                    <!-- Password strength indicator -->
-                    <div class="mt-2">
+                    <!-- Password strength -->
+                    <div class="mt-1.5">
                         <div class="flex gap-1">
-                            <div class="h-1 flex-1 rounded-full transition-colors"
-                                 :class="password.length >= 1 ? (password.length >= 12 ? 'bg-green-500' : password.length >= 8 ? 'bg-yellow-500' : 'bg-red-400') : 'bg-gray-200'"></div>
-                            <div class="h-1 flex-1 rounded-full transition-colors"
-                                 :class="password.length >= 8 ? (password.length >= 12 ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200'"></div>
-                            <div class="h-1 flex-1 rounded-full transition-colors"
-                                 :class="password.length >= 12 ? 'bg-green-500' : 'bg-gray-200'"></div>
+                            <div class="h-0.5 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 1 ? (password.length >= 12 ? 'bg-emerald-500' : password.length >= 8 ? 'bg-amber-500' : 'bg-red-500') : 'bg-dark-700'"></div>
+                            <div class="h-0.5 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 8 ? (password.length >= 12 ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-dark-700'"></div>
+                            <div class="h-0.5 flex-1 rounded-full transition-colors"
+                                 :class="password.length >= 12 ? 'bg-emerald-500' : 'bg-dark-700'"></div>
                         </div>
-                        <p class="mt-1 text-xs" :class="touched.password && !passwordValid ? 'text-red-600' : 'text-gray-500'">
-                            <span x-show="password.length === 0">At least 8 characters required</span>
-                            <span x-show="password.length > 0 && password.length < 8" x-cloak><span x-text="password.length"></span> / 8 characters</span>
-                            <span x-show="password.length >= 8 && password.length < 12" x-cloak class="text-yellow-600">Good password</span>
-                            <span x-show="password.length >= 12" x-cloak class="text-green-600">Strong password</span>
+                        <p class="mt-1 text-xs" :class="touched.password && !passwordValid ? 'text-red-400' : 'text-dark-500'">
+                            <span x-show="password.length === 0">At least 8 characters</span>
+                            <span x-show="password.length > 0 && password.length < 8" x-cloak><span x-text="password.length"></span>/8 characters</span>
+                            <span x-show="password.length >= 8 && password.length < 12" x-cloak class="text-amber-500">Good</span>
+                            <span x-show="password.length >= 12" x-cloak class="text-emerald-500">Strong</span>
                         </p>
                     </div>
                 </div>
 
                 <!-- Confirm Password -->
                 <div>
-                    <label for="password_confirm" class="block text-sm font-medium text-gray-700">Confirm password</label>
-                    <div class="mt-1 relative">
+                    <label for="password_confirm" class="block text-sm font-medium text-dark-300 mb-1.5">Confirm password</label>
+                    <div class="relative">
                         <input id="password_confirm"
                                name="password_confirm"
                                type="password"
@@ -161,26 +158,25 @@
                                required
                                x-model="passwordConfirm"
                                @blur="touched.passwordConfirm = true"
-                               :class="touched.passwordConfirm && !passwordsMatch ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'"
-                               class="block w-full appearance-none rounded-md border px-3 py-2 placeholder-gray-400 shadow-sm focus:outline-none sm:text-sm">
-                        <!-- Success checkmark -->
+                               :class="touched.passwordConfirm && !passwordsMatch ? 'border-red-700 focus:border-red-500 focus:ring-red-500' : 'border-dark-700 focus:border-primary-500 focus:ring-primary-500'"
+                               class="block w-full rounded-md bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 transition-colors">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
                              x-show="touched.passwordConfirm && passwordsMatch" x-cloak>
-                            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="h-4 w-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </div>
                     </div>
-                    <p class="mt-1 text-xs text-red-600" x-show="touched.passwordConfirm && !passwordsMatch" x-cloak>
+                    <p class="mt-1 text-xs text-red-400" x-show="touched.passwordConfirm && !passwordsMatch" x-cloak>
                         Passwords don't match
                     </p>
                 </div>
 
-                <div>
+                <div class="pt-1">
                     <button type="submit"
                             :disabled="!formValid || submitting"
-                            :class="formValid && !submitting ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-300 cursor-not-allowed'"
-                            class="flex w-full justify-center rounded-md border border-transparent py-2.5 px-4 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+                            :class="formValid && !submitting ? 'bg-primary-500 hover:bg-primary-600' : 'bg-dark-700 cursor-not-allowed'"
+                            class="flex w-full justify-center rounded-md py-2 px-4 text-sm font-medium text-white transition-colors">
                         <span x-show="!submitting">Create account</span>
                         <span x-show="submitting" x-cloak class="flex items-center">
                             <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
@@ -193,14 +189,12 @@
                 </div>
             </form>
 
-            <div class="mt-6">
-                <p class="text-center text-xs text-gray-500">
-                    By creating an account, you agree to our
-                    <a href="#" class="text-primary-600 hover:text-primary-500">Terms of Service</a>
-                    and
-                    <a href="#" class="text-primary-600 hover:text-primary-500">Privacy Policy</a>
-                </p>
-            </div>
+            <p class="mt-4 text-center text-xs text-dark-500">
+                By creating an account, you agree to our
+                <a href="#" class="text-primary-500 hover:text-primary-400">Terms</a>
+                and
+                <a href="#" class="text-primary-500 hover:text-primary-400">Privacy Policy</a>
+            </p>
         </div>
     </div>
 </div>

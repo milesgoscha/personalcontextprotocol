@@ -58,5 +58,5 @@ echo -e "${GREEN}Starting control plane on http://localhost:8000${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
 echo ""
 
-cd "$PROJECT_ROOT/hosted/control"
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+cd "$PROJECT_ROOT/hosted"
+uvicorn control.app:app --reload --host 0.0.0.0 --port 8000

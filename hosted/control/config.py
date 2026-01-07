@@ -55,6 +55,16 @@ class Settings(BaseSettings):
     signup_rate_limit: int = 5  # per hour per IP
     max_nodes_per_host: int = 50
 
+    # Admin users (comma-separated usernames)
+    admin_usernames: str = ""
+
+    def is_admin(self, username: str) -> bool:
+        """Check if a username has admin access."""
+        if not self.admin_usernames:
+            return False
+        admins = [u.strip().lower() for u in self.admin_usernames.split(",") if u.strip()]
+        return username.lower() in admins
+
     @property
     def current_key_version(self) -> int:
         """Get the current (latest) encryption key version."""

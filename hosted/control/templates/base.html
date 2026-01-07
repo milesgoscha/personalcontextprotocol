@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PCP{% endblock %}</title>
 
-    <!-- Fonts: IBM Plex family for that refined technical documentation feel -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/img/pcp-logo.svg">
+
+    <!-- Fonts: Inter for clean UI -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,55 +20,57 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
-                        mono: ['IBM Plex Mono', 'monospace'],
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Menlo', 'monospace'],
                     },
                     colors: {
-                        // Sophisticated teal accent - inspired by modern dev tools
-                        accent: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            200: '#99f6e4',
-                            300: '#5eead4',
-                            400: '#2dd4bf',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                            700: '#0f766e',
-                            800: '#115e59',
-                            900: '#134e4a',
+                        // GitBook-style orange accent
+                        primary: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f26b3a',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            800: '#9a3412',
+                            900: '#7c2d12',
                         },
-                        // Refined grays with slight warmth
-                        surface: {
-                            50: '#fafafa',
-                            100: '#f4f4f5',
-                            200: '#e4e4e7',
-                            300: '#d4d4d8',
-                            400: '#a1a1aa',
-                            500: '#71717a',
-                            600: '#52525b',
-                            700: '#3f3f46',
-                            800: '#27272a',
-                            900: '#18181b',
+                        // Dark theme grays
+                        dark: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            850: '#1a1d24',
+                            900: '#111318',
+                            950: '#0d0f12',
                         }
                     },
                     fontSize: {
                         'xs': ['0.75rem', { lineHeight: '1.5' }],
-                        'sm': ['0.875rem', { lineHeight: '1.5715' }],
-                        'base': ['1rem', { lineHeight: '1.75' }],
-                        'lg': ['1.125rem', { lineHeight: '1.75' }],
-                        'xl': ['1.25rem', { lineHeight: '1.75' }],
-                        '2xl': ['1.5rem', { lineHeight: '1.415' }],
-                        '3xl': ['1.875rem', { lineHeight: '1.333' }],
+                        'sm': ['0.8125rem', { lineHeight: '1.5' }],
+                        'base': ['0.875rem', { lineHeight: '1.6' }],
+                        'lg': ['1rem', { lineHeight: '1.5' }],
+                        'xl': ['1.125rem', { lineHeight: '1.4' }],
+                        '2xl': ['1.25rem', { lineHeight: '1.3' }],
+                        '3xl': ['1.5rem', { lineHeight: '1.25' }],
                     },
-                    boxShadow: {
-                        'soft': '0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 6px -1px rgb(0 0 0 / 0.02)',
-                        'card': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.02)',
-                        'elevated': '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03)',
+                    borderRadius: {
+                        'sm': '0.25rem',
+                        'DEFAULT': '0.375rem',
+                        'md': '0.5rem',
+                        'lg': '0.625rem',
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.4s ease-out',
-                        'slide-up': 'slideUp 0.4s ease-out',
-                        'slide-in': 'slideIn 0.3s ease-out',
+                        'fade-in': 'fadeIn 0.2s ease-out',
+                        'slide-up': 'slideUp 0.25s ease-out',
                     },
                     keyframes: {
                         fadeIn: {
@@ -73,12 +78,8 @@
                             '100%': { opacity: '1' },
                         },
                         slideUp: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
                             '100%': { opacity: '1', transform: 'translateY(0)' },
-                        },
-                        slideIn: {
-                            '0%': { opacity: '0', transform: 'translateX(-10px)' },
-                            '100%': { opacity: '1', transform: 'translateX(0)' },
                         },
                     }
                 }
@@ -95,61 +96,70 @@
     <style>
         [x-cloak] { display: none !important; }
 
-        /* Smooth page transitions */
-        .htmx-swapping { opacity: 0; transition: opacity 0.15s ease-out; }
+        /* Smooth transitions */
+        .htmx-swapping { opacity: 0; transition: opacity 0.1s ease-out; }
 
         /* Progress indicator */
         .htmx-request .htmx-indicator { opacity: 1; }
-        .htmx-indicator { opacity: 0; transition: opacity 0.2s ease; }
+        .htmx-indicator { opacity: 0; transition: opacity 0.15s ease; }
 
-        /* Loading bar */
+        /* Loading bar - orange accent */
         #progress-bar {
             position: fixed;
             top: 0;
             left: 0;
             height: 2px;
             width: 0;
-            background: linear-gradient(90deg, #14b8a6, #2dd4bf);
+            background: #f26b3a;
             z-index: 9999;
-            transition: width 0.3s ease;
+            transition: width 0.2s ease;
         }
         .htmx-request #progress-bar { width: 90%; }
 
         /* Button loading states */
         button.htmx-request { opacity: 0.7; pointer-events: none; }
 
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        /* Scrollbar - dark theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
-        /* Code blocks */
+        /* Code blocks - dark */
         code:not(pre code) {
-            background: #f4f4f5;
-            padding: 0.125rem 0.375rem;
+            background: #1a1d24;
+            padding: 0.15rem 0.4rem;
             border-radius: 0.25rem;
-            font-size: 0.875em;
-            color: #0f766e;
+            font-size: 0.85em;
+            color: #f3f4f6;
+            border: 1px solid #374151;
         }
 
         /* Focus styles */
         *:focus-visible {
-            outline: 2px solid #14b8a6;
+            outline: 2px solid #f26b3a;
             outline-offset: 2px;
         }
 
-        /* Staggered animation delays for lists */
-        .stagger-1 { animation-delay: 0.05s; }
-        .stagger-2 { animation-delay: 0.1s; }
-        .stagger-3 { animation-delay: 0.15s; }
-        .stagger-4 { animation-delay: 0.2s; }
-        .stagger-5 { animation-delay: 0.25s; }
+        /* Selection */
+        ::selection {
+            background: #f26b3a;
+            color: white;
+        }
+
+        /* Input autofill dark mode */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+            -webkit-text-fill-color: #f3f4f6;
+            -webkit-box-shadow: 0 0 0px 1000px #1a1d24 inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
     </style>
 
     {% block head %}{% endblock %}
 </head>
-<body class="h-full bg-surface-50 text-surface-900 antialiased">
+<body class="h-full bg-dark-950 text-dark-200 antialiased">
     <!-- Progress bar -->
     <div id="progress-bar"></div>
 
@@ -165,28 +175,27 @@
     </div>
     {% endblock %}
 
-    <!-- Toast notifications -->
+    <!-- Toast notifications - dark style -->
     <div id="toast-container"
-         class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"
+         class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"
          x-data="{ toasts: [] }"
-         @notify.window="toasts.push({message: $event.detail.message, type: $event.detail.type || 'info', id: Date.now()}); setTimeout(() => toasts.shift(), 5000)">
+         @notify.window="toasts.push({message: $event.detail.message, type: $event.detail.type || 'info', id: Date.now()}); setTimeout(() => toasts.shift(), 4000)">
         <template x-for="toast in toasts" :key="toast.id">
             <div x-show="true"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-2 scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                 x-transition:leave="transition ease-in duration-200"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
                  :class="{
-                     'bg-emerald-600': toast.type === 'success',
-                     'bg-rose-600': toast.type === 'error',
-                     'bg-surface-800': toast.type === 'info',
-                     'bg-amber-500': toast.type === 'warning'
+                     'bg-dark-800 text-dark-100 border border-dark-700': toast.type === 'success' || toast.type === 'info',
+                     'bg-red-900/80 text-red-100 border border-red-800': toast.type === 'error',
+                     'bg-amber-900/80 text-amber-100 border border-amber-800': toast.type === 'warning'
                  }"
-                 class="px-4 py-3 rounded-lg text-white text-sm font-medium shadow-elevated flex items-center gap-2">
+                 class="px-4 py-2.5 rounded-md text-sm font-medium flex items-center gap-2">
                 <template x-if="toast.type === 'success'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 </template>
                 <template x-if="toast.type === 'error'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

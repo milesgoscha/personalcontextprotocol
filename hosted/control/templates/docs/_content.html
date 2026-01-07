@@ -1,0 +1,312 @@
+<!-- Docs content partial - included by both standalone docs and dashboard docs -->
+
+<!-- Breadcrumb -->
+<div class="text-sm text-dark-500 mb-2">Get started</div>
+
+<!-- Title -->
+<h1 class="text-3xl font-bold text-dark-50 mb-8">What is the Personal Context Protocol (PCP)?</h1>
+
+<!-- Content -->
+<div class="prose prose-invert prose-dark max-w-none">
+    <p class="text-dark-300 text-lg leading-relaxed mb-6">
+        PCP (Personal Context Protocol) is a protocol for giving AI agents access to your personal context &mdash; preferences, history, and information that makes AI interactions more helpful.
+    </p>
+
+    <p class="text-dark-400 leading-relaxed mb-6">
+        Using PCP, AI applications like Claude can connect to your personal data store (your "node") to remember things about you across conversations. Your preferences, past projects, important facts, and observations all travel with you.
+    </p>
+
+    <p class="text-dark-400 leading-relaxed mb-8">
+        Think of PCP like a personal memory bank for AI. Just as you don't want to re-explain your job, preferences, and context every time you talk to a colleague, PCP lets AI agents remember what matters to you.
+    </p>
+
+    <!-- Architecture diagram - hub design -->
+    <div id="architecture" class="my-10 py-8 px-6 bg-dark-900 border border-dark-800 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-center gap-8">
+            <!-- Left: AI Apps -->
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2 px-3 py-2 bg-dark-850 border border-dark-700 rounded-lg">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span class="text-xs font-medium text-dark-200">Claude Code</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 bg-dark-850 border border-dark-700 rounded-lg">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span class="text-xs font-medium text-dark-200">Claude Desktop</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 bg-dark-850 border border-dark-700 rounded-lg">
+                    <div class="w-2 h-2 rounded-full bg-violet-500"></div>
+                    <span class="text-xs font-medium text-dark-200">Your Apps</span>
+                </div>
+            </div>
+
+            <!-- Bidirectional arrows -->
+            <div class="flex flex-col items-center gap-1 text-dark-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                </svg>
+                <span class="text-[10px] text-dark-600">read & write</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+                </svg>
+            </div>
+
+            <!-- Center: PCP Node with data types inside -->
+            <div class="relative">
+                <div class="w-44 py-5 px-4 rounded-2xl bg-gradient-to-br from-primary-500/15 via-primary-500/5 to-transparent border border-primary-500/30">
+                    <div class="flex items-center justify-center gap-2 mb-3">
+                        <img src="/static/img/pcp-logo.svg" alt="PCP" class="w-6 h-6">
+                        <span class="text-sm font-medium text-dark-100">Your Node</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="px-2.5 py-1 bg-dark-800/60 rounded text-[11px] text-dark-300 text-center">Events</div>
+                        <div class="px-2.5 py-1 bg-dark-800/60 rounded text-[11px] text-dark-300 text-center">Learnings</div>
+                        <div class="px-2.5 py-1 bg-dark-800/60 rounded text-[11px] text-dark-300 text-center">Reflections</div>
+                        <div class="px-2.5 py-1 bg-dark-800/60 rounded text-[11px] text-dark-300 text-center">Identity</div>
+                    </div>
+                </div>
+                <!-- Glow effect -->
+                <div class="absolute inset-0 rounded-2xl bg-primary-500/5 blur-xl -z-10"></div>
+            </div>
+        </div>
+    </div>
+
+    <h2 id="what-can-pcp-enable" class="text-xl font-semibold text-dark-100 mt-10 mb-4">What can PCP enable?</h2>
+
+    <ul class="space-y-3 text-dark-400 mb-8">
+        <li class="flex gap-2">
+            <span class="text-dark-600">&bull;</span>
+            <span>Claude remembers your coding preferences, project context, and past decisions across sessions.</span>
+        </li>
+        <li class="flex gap-2">
+            <span class="text-dark-600">&bull;</span>
+            <span>AI assistants can reference your calendar events, notes, and personal information without re-explaining.</span>
+        </li>
+        <li class="flex gap-2">
+            <span class="text-dark-600">&bull;</span>
+            <span>Your context travels with you &mdash; switch AI tools without losing your history.</span>
+        </li>
+        <li class="flex gap-2">
+            <span class="text-dark-600">&bull;</span>
+            <span>Enterprise agents can maintain user preferences while keeping data isolated per user.</span>
+        </li>
+    </ul>
+
+    <h2 id="data-types" class="text-xl font-semibold text-dark-100 mt-10 mb-4">What PCP stores</h2>
+
+    <p class="text-dark-400 leading-relaxed mb-4">
+        PCP organizes your context into four types:
+    </p>
+
+    <div class="grid gap-4 mb-8">
+        <div class="p-4 bg-dark-900 border border-dark-800 rounded-lg">
+            <h3 class="font-medium text-dark-200 mb-1">Events</h3>
+            <p class="text-sm text-dark-500">Things that happened. Meeting notes, completed tasks, observations about your work.</p>
+        </div>
+        <div class="p-4 bg-dark-900 border border-dark-800 rounded-lg">
+            <h3 class="font-medium text-dark-200 mb-1">Learnings</h3>
+            <p class="text-sm text-dark-500">Durable facts about you. Preferences, skills, important information that stays constant.</p>
+        </div>
+        <div class="p-4 bg-dark-900 border border-dark-800 rounded-lg">
+            <h3 class="font-medium text-dark-200 mb-1">Reflections</h3>
+            <p class="text-sm text-dark-500">AI-generated summaries and insights synthesized from your events and learnings.</p>
+        </div>
+        <div class="p-4 bg-dark-900 border border-dark-800 rounded-lg">
+            <h3 class="font-medium text-dark-200 mb-1">Identity</h3>
+            <p class="text-sm text-dark-500">Your name, profile, and basic information for personalization.</p>
+        </div>
+    </div>
+
+    <h2 id="permissions" class="text-xl font-semibold text-dark-100 mt-10 mb-4">Permission-based access</h2>
+
+    <p class="text-dark-400 leading-relaxed mb-4">
+        You control exactly what each application can access. When an app wants to connect to your node, it requests specific permissions:
+    </p>
+
+    <ul class="space-y-2 text-dark-400 mb-8">
+        <li class="flex gap-2">
+            <span class="text-emerald-500">&bull;</span>
+            <span><strong class="text-dark-300">Read</strong> &mdash; Query your events, learnings, or reflections</span>
+        </li>
+        <li class="flex gap-2">
+            <span class="text-blue-500">&bull;</span>
+            <span><strong class="text-dark-300">Write</strong> &mdash; Record new events or learnings</span>
+        </li>
+        <li class="flex gap-2">
+            <span class="text-amber-500">&bull;</span>
+            <span><strong class="text-dark-300">Admin</strong> &mdash; Full access (for your own tools)</span>
+        </li>
+    </ul>
+
+    <!-- Integrations -->
+    <h2 id="integrations" class="text-xl font-semibold text-dark-100 mt-10 mb-4">Connect your AI tools</h2>
+
+    <p class="text-dark-400 leading-relaxed mb-6">
+        PCP works with any MCP-compatible AI tool. Here's how to connect the most popular ones.
+    </p>
+
+    {% set base_url = node.public_url if node else 'https://yourname.pcp.bio' %}
+
+    <!-- Claude Code -->
+    <h3 id="claude-code" class="text-lg font-medium text-dark-200 mt-8 mb-3">Claude Code</h3>
+    <p class="text-dark-400 text-sm mb-3">Run this command in your terminal:</p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">claude mcp add pcp --transport http {{ base_url }}/mcp/mcp --header "Authorization: Bearer &lt;token&gt;"</pre>
+        <button @click="navigator.clipboard.writeText(`claude mcp add pcp --transport http {{ base_url }}/mcp/mcp --header &quot;Authorization: Bearer <token>&quot;`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+    <p class="text-dark-500 text-xs mt-2 mb-6">
+        {% if not node %}Replace <code class="text-dark-400 bg-dark-800 px-1 py-0.5 rounded">yourname</code> with your username and {% endif %}Replace <code class="text-dark-400 bg-dark-800 px-1 py-0.5 rounded">&lt;token&gt;</code> with an API token from your dashboard.
+    </p>
+
+    <!-- Claude Desktop -->
+    <h3 id="claude-desktop" class="text-lg font-medium text-dark-200 mt-8 mb-3">Claude Desktop</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS):
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
+  "mcpServers": {
+    "pcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "{{ base_url }}/mcp/mcp", "--header", "Authorization: Bearer &lt;token&gt;"]
+    }
+  }
+}</pre>
+        <button @click="navigator.clipboard.writeText(JSON.stringify({mcpServers:{pcp:{command:'npx',args:['-y','mcp-remote','{{ base_url }}/mcp/mcp','--header','Authorization: Bearer <token>']}}}, null, 2)); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+    <p class="text-dark-500 text-xs mt-2 mb-6">Uses <code class="text-dark-400 bg-dark-800 px-1 py-0.5 rounded">mcp-remote</code> to bridge HTTP connections.</p>
+
+    <!-- Cursor -->
+    <h3 id="cursor" class="text-lg font-medium text-dark-200 mt-8 mb-3">Cursor</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">.cursor/mcp.json</code> or <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.cursor/mcp.json</code>:
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
+  "mcpServers": {
+    "pcp": {
+      "url": "{{ base_url }}/mcp/mcp",
+      "headers": { "Authorization": "Bearer &lt;token&gt;" }
+    }
+  }
+}</pre>
+        <button @click="navigator.clipboard.writeText(JSON.stringify({mcpServers:{pcp:{url:'{{ base_url }}/mcp/mcp',headers:{Authorization:'Bearer <token>'}}}}, null, 2)); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+
+    <!-- VS Code / Copilot -->
+    <h3 id="vscode" class="text-lg font-medium text-dark-200 mt-8 mb-3">VS Code (GitHub Copilot)</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">.vscode/mcp.json</code>:
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
+  "servers": {
+    "pcp": {
+      "type": "sse",
+      "url": "{{ base_url }}/mcp/mcp",
+      "headers": { "Authorization": "Bearer &lt;token&gt;" }
+    }
+  }
+}</pre>
+        <button @click="navigator.clipboard.writeText(JSON.stringify({servers:{pcp:{type:'sse',url:'{{ base_url }}/mcp/mcp',headers:{Authorization:'Bearer <token>'}}}}, null, 2)); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+
+    <!-- Windsurf -->
+    <h3 id="windsurf" class="text-lg font-medium text-dark-200 mt-8 mb-3">Windsurf</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.codeium/windsurf/mcp_config.json</code>:
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
+  "mcpServers": {
+    "pcp": {
+      "serverUrl": "{{ base_url }}/mcp/mcp",
+      "headers": { "Authorization": "Bearer &lt;token&gt;" }
+    }
+  }
+}</pre>
+        <button @click="navigator.clipboard.writeText(JSON.stringify({mcpServers:{pcp:{serverUrl:'{{ base_url }}/mcp/mcp',headers:{Authorization:'Bearer <token>'}}}}, null, 2)); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+
+    <!-- Gemini CLI -->
+    <h3 id="gemini" class="text-lg font-medium text-dark-200 mt-8 mb-3">Gemini CLI</h3>
+    <p class="text-dark-400 text-sm mb-3">Run this command in your terminal:</p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">gemini mcp add --transport http -H "Authorization: Bearer &lt;token&gt;" pcp {{ base_url }}/mcp/mcp</pre>
+        <button @click="navigator.clipboard.writeText(`gemini mcp add --transport http -H &quot;Authorization: Bearer <token>&quot; pcp {{ base_url }}/mcp/mcp`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+
+    <!-- OpenAI Codex CLI -->
+    <h3 id="codex" class="text-lg font-medium text-dark-200 mt-8 mb-3">OpenAI Codex CLI</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.codex/config.toml</code>:
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">[mcp_servers.pcp]
+url = "{{ base_url }}/mcp/mcp"
+http_headers = { "Authorization" = "Bearer &lt;token&gt;" }</pre>
+        <button @click="navigator.clipboard.writeText(`[mcp_servers.pcp]\nurl = &quot;{{ base_url }}/mcp/mcp&quot;\nhttp_headers = { &quot;Authorization&quot; = &quot;Bearer <token>&quot; }`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+
+    <!-- Other tools -->
+    <h3 id="other-tools" class="text-lg font-medium text-dark-200 mt-8 mb-3">Other MCP clients</h3>
+    <p class="text-dark-400 text-sm mb-3">
+        For any MCP-compatible client, use these connection details:
+    </p>
+    <div class="bg-dark-900 border border-dark-800 rounded-lg p-4 overflow-x-auto mb-2">
+        <div class="text-sm text-dark-200 font-mono space-y-1">
+            <div><span class="text-dark-500">URL:</span> {{ base_url }}/mcp/mcp</div>
+            <div><span class="text-dark-500">Transport:</span> HTTP <span class="text-dark-600">(recommended)</span> or SSE</div>
+            <div><span class="text-dark-500">Header:</span> Authorization: Bearer &lt;token&gt;</div>
+        </div>
+    </div>
+    <p class="text-dark-500 text-xs mb-8">
+        PCP supports both HTTP and SSE transports. Use HTTP for best compatibility.
+    </p>
+
+    {% if not user %}
+    <!-- CTA for non-logged in users -->
+    <div class="mt-12 p-6 bg-dark-900 border border-dark-800 rounded-lg text-center">
+        <h3 class="text-lg font-medium text-dark-100 mb-2">Ready to get started?</h3>
+        <p class="text-dark-400 mb-4">Create your free PCP node and connect your first AI agent.</p>
+        <a href="/signup" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors">
+            Create your node
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+        </a>
+    </div>
+    {% else %}
+    <!-- CTA for logged in users -->
+    <div class="mt-12 p-6 bg-dark-900 border border-dark-800 rounded-lg text-center">
+        <h3 class="text-lg font-medium text-dark-100 mb-2">Need an API token?</h3>
+        <p class="text-dark-400 mb-4">Create tokens to authenticate MCP clients with your node.</p>
+        <a href="/dashboard/tokens" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors">
+            Manage tokens
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+        </a>
+    </div>
+    {% endif %}
+</div>

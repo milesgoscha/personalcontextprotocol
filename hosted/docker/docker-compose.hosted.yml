@@ -132,6 +132,9 @@ services:
       PCP_HOST: "0.0.0.0"
       PCP_PORT: "8000"
       DEBUG: ${DEBUG:-false}
+
+      # Admin users (comma-separated usernames)
+      ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
     # No Docker socket needed in multi-tenant mode
     networks:
       - pcp-network

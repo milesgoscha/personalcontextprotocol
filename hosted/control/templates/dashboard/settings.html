@@ -3,63 +3,63 @@
 {% block title %}Settings - PCP{% endblock %}
 
 {% block page_content %}
-<div class="px-6 lg:px-10 py-8 max-w-4xl">
+<div class="px-8 lg:px-12 py-8 max-w-3xl">
     <!-- Page header -->
     <header class="mb-8 animate-fade-in">
-        <h1 class="text-2xl font-semibold text-surface-900">Settings</h1>
-        <p class="mt-1 text-surface-500">Manage your account and node settings</p>
+        <h1 class="text-2xl font-semibold text-dark-100">Settings</h1>
+        <p class="mt-1.5 text-dark-400">Manage your account and node settings</p>
     </header>
 
     <!-- Account Information -->
-    <div class="bg-white rounded-xl border border-surface-200 shadow-card overflow-hidden mb-6 animate-slide-up">
-        <div class="px-6 py-5 border-b border-surface-100">
-            <h2 class="text-base font-medium text-surface-900">Account Information</h2>
+    <div class="bg-dark-900 rounded-lg border border-dark-800 overflow-hidden mb-6 animate-slide-up">
+        <div class="px-5 py-3 border-b border-dark-800">
+            <h2 class="text-sm font-medium text-dark-200">Account Information</h2>
         </div>
-        <div class="divide-y divide-surface-100">
-            <div class="px-6 py-4 flex items-center justify-between">
+        <div class="divide-y divide-dark-800">
+            <div class="px-5 py-4 flex items-center justify-between">
                 <div>
-                    <dt class="text-sm font-medium text-surface-500">Username</dt>
-                    <dd class="mt-0.5 text-sm text-surface-900">{{ user.username }}</dd>
+                    <dt class="text-sm font-medium text-dark-500">Username</dt>
+                    <dd class="mt-0.5 text-sm text-dark-100">{{ user.username }}</dd>
                 </div>
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-surface-100 to-surface-200 flex items-center justify-center">
-                    <span class="text-sm font-medium text-surface-600">{{ user.username[0]|upper }}</span>
+                <div class="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center">
+                    <span class="text-sm font-semibold text-dark-300">{{ user.username[0]|upper }}</span>
                 </div>
             </div>
-            <div class="px-6 py-4">
-                <dt class="text-sm font-medium text-surface-500">Email</dt>
-                <dd class="mt-0.5 text-sm text-surface-900">{{ user.email }}</dd>
+            <div class="px-5 py-4">
+                <dt class="text-sm font-medium text-dark-500">Email</dt>
+                <dd class="mt-0.5 text-sm text-dark-100">{{ user.email }}</dd>
             </div>
-            <div class="px-6 py-4">
-                <dt class="text-sm font-medium text-surface-500">Node URL</dt>
+            <div class="px-5 py-4">
+                <dt class="text-sm font-medium text-dark-500">Node URL</dt>
                 <dd class="mt-0.5 text-sm">
                     {% if node %}
-                    <a href="{{ node.public_url }}" target="_blank" class="text-accent-600 hover:text-accent-700 inline-flex items-center gap-1.5">
+                    <a href="{{ node.public_url }}" target="_blank" class="text-primary-500 hover:text-primary-400 inline-flex items-center gap-1.5">
                         {{ node.public_url }}
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                         </svg>
                     </a>
                     {% else %}
-                    <span class="text-surface-400">Not provisioned</span>
+                    <span class="text-dark-600">Not provisioned</span>
                     {% endif %}
                 </dd>
             </div>
-            <div class="px-6 py-4">
-                <dt class="text-sm font-medium text-surface-500">Member since</dt>
-                <dd class="mt-0.5 text-sm text-surface-900">{{ user.created_at.strftime('%B %d, %Y') }}</dd>
+            <div class="px-5 py-4">
+                <dt class="text-sm font-medium text-dark-500">Member since</dt>
+                <dd class="mt-0.5 text-sm text-dark-100">{{ user.created_at.strftime('%B %d, %Y') }}</dd>
             </div>
         </div>
     </div>
 
     <!-- Data Export -->
-    <div class="bg-white rounded-xl border border-surface-200 shadow-card overflow-hidden mb-6 animate-slide-up" style="animation-delay: 0.05s">
-        <div class="px-6 py-5 border-b border-surface-100">
-            <h2 class="text-base font-medium text-surface-900">Data Export</h2>
+    <div class="bg-dark-900 rounded-lg border border-dark-800 overflow-hidden mb-6 animate-slide-up" style="animation-delay: 0.05s">
+        <div class="px-5 py-3 border-b border-dark-800">
+            <h2 class="text-sm font-medium text-dark-200">Data Export</h2>
         </div>
-        <div class="p-6">
-            <p class="text-sm text-surface-600 mb-4">Download all your context data as a JSONL file for backup or portability.</p>
+        <div class="p-5">
+            <p class="text-sm text-dark-400 mb-4">Download all your context data as a JSONL file for backup or portability.</p>
             <a href="/api/v1/node/export"
-               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors">
+               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-dark-200 bg-dark-800 border border-dark-700 hover:bg-dark-750 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
@@ -69,29 +69,29 @@
     </div>
 
     <!-- Danger Zone -->
-    <div class="bg-white rounded-xl border-2 border-rose-200 shadow-card overflow-hidden animate-slide-up" style="animation-delay: 0.1s">
-        <div class="px-6 py-5 border-b border-rose-100 bg-rose-50/50">
-            <h2 class="text-base font-medium text-rose-700 flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-dark-900 rounded-lg border border-red-900/50 overflow-hidden animate-slide-up" style="animation-delay: 0.1s">
+        <div class="px-5 py-3 border-b border-red-900/30 bg-red-900/20">
+            <h2 class="text-sm font-medium text-red-400 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
                 Danger Zone
             </h2>
         </div>
-        <div class="divide-y divide-surface-100">
+        <div class="divide-y divide-dark-800">
             <!-- Delete Node -->
-            <div class="p-6">
+            <div class="p-5">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="text-sm font-medium text-surface-900">Delete Node</h3>
-                        <p class="mt-1 text-sm text-surface-500">
+                        <h3 class="text-sm font-medium text-dark-100">Delete Node</h3>
+                        <p class="mt-1 text-sm text-dark-400">
                             Delete your PCP node and all associated context data. This action cannot be undone.
                         </p>
                     </div>
                     <button type="button"
                             x-data
                             @click="$dispatch('open-modal', 'delete-node')"
-                            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors">
+                            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-red-400 bg-red-900/20 border border-red-800/50 hover:bg-red-900/30 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -101,18 +101,18 @@
             </div>
 
             <!-- Delete Account -->
-            <div class="p-6">
+            <div class="p-5">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="text-sm font-medium text-surface-900">Delete Account</h3>
-                        <p class="mt-1 text-sm text-surface-500">
+                        <h3 class="text-sm font-medium text-dark-100">Delete Account</h3>
+                        <p class="mt-1 text-sm text-dark-400">
                             Permanently delete your account, node, and all data. This action cannot be undone.
                         </p>
                     </div>
                     <button type="button"
                             x-data
                             @click="$dispatch('open-modal', 'delete-account')"
-                            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors">
+                            class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
@@ -138,7 +138,7 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-surface-900/50 backdrop-blur-sm"></div>
+         class="fixed inset-0 bg-dark-950/80 backdrop-blur-sm"></div>
     <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div x-show="open"
@@ -149,18 +149,18 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  @click.away="open = false"
-                 class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-elevated transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                 class="relative transform overflow-hidden rounded-lg bg-dark-900 border border-dark-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <form action="/api/v1/node" method="DELETE" hx-delete="/api/v1/node" hx-swap="none">
-                    <div class="p-6">
+                    <div class="p-5">
                         <div class="flex items-start gap-4">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-red-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-base font-semibold text-surface-900">Delete Node</h3>
-                                <p class="mt-2 text-sm text-surface-600">
+                                <h3 class="text-base font-semibold text-dark-100">Delete Node</h3>
+                                <p class="mt-2 text-sm text-dark-400">
                                     This will permanently delete your PCP node and all its data. Enter your password to confirm.
                                 </p>
                                 <div class="mt-4">
@@ -168,19 +168,19 @@
                                            name="password"
                                            required
                                            placeholder="Enter your password"
-                                           class="block w-full rounded-lg border border-surface-200 px-3 py-2 text-surface-900 placeholder-surface-400 shadow-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500 sm:text-sm">
+                                           class="block w-full rounded-md border border-dark-700 bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="px-6 py-4 bg-surface-50 flex flex-row-reverse gap-3">
+                    <div class="px-5 py-4 bg-dark-850/50 border-t border-dark-800 flex flex-row-reverse gap-3">
                         <button type="submit"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors">
+                                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
                             Delete Node
                         </button>
                         <button type="button"
                                 @click="open = false"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors">
+                                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-dark-200 bg-dark-800 border border-dark-700 hover:bg-dark-750 transition-colors">
                             Cancel
                         </button>
                     </div>
@@ -204,7 +204,7 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-surface-900/50 backdrop-blur-sm"></div>
+         class="fixed inset-0 bg-dark-950/80 backdrop-blur-sm"></div>
     <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <div x-show="open"
@@ -215,18 +215,18 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  @click.away="open = false"
-                 class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-elevated transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                 class="relative transform overflow-hidden rounded-lg bg-dark-900 border border-dark-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <form action="/api/v1/account" method="DELETE" hx-delete="/api/v1/account" hx-swap="none">
-                    <div class="p-6">
+                    <div class="p-5">
                         <div class="flex items-start gap-4">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-red-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-base font-semibold text-surface-900">Delete Account</h3>
-                                <p class="mt-2 text-sm text-surface-600">
+                                <h3 class="text-base font-semibold text-dark-100">Delete Account</h3>
+                                <p class="mt-2 text-sm text-dark-400">
                                     This will permanently delete your account, your PCP node, and all data. This action cannot be undone.
                                 </p>
                                 <div class="mt-4">
@@ -234,19 +234,19 @@
                                            name="password"
                                            required
                                            placeholder="Enter your password"
-                                           class="block w-full rounded-lg border border-surface-200 px-3 py-2 text-surface-900 placeholder-surface-400 shadow-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500 sm:text-sm">
+                                           class="block w-full rounded-md border border-dark-700 bg-dark-850 px-3 py-2 text-sm text-dark-100 placeholder-dark-500 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors">
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="px-6 py-4 bg-surface-50 flex flex-row-reverse gap-3">
+                    <div class="px-5 py-4 bg-dark-850/50 border-t border-dark-800 flex flex-row-reverse gap-3">
                         <button type="submit"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 transition-colors">
+                                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
                             Delete Everything
                         </button>
                         <button type="button"
                                 @click="open = false"
-                                class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors">
+                                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-dark-200 bg-dark-800 border border-dark-700 hover:bg-dark-750 transition-colors">
                             Cancel
                         </button>
                     </div>

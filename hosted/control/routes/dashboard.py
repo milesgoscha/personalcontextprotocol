@@ -274,8 +274,8 @@ async def signup_submit(
     db.add(session)
     await db.commit()
 
-    # Redirect to onboarding
-    response = RedirectResponse(url="/onboarding/1", status_code=303)
+    # Go directly to dashboard (node provisioned in background)
+    response = RedirectResponse(url="/dashboard", status_code=303)
     set_auth_cookies(response, access_token, refresh_token)
     return response
 
@@ -315,6 +315,18 @@ async def dashboard_home(
     result = await db.execute(select(Node).where(Node.user_id == user.id))
     node = result.scalar_one_or_none()
 
+    # Auto-provision pending nodes (replaces onboarding flow)
+    if node and node.status == NodeStatus.PENDING:
+        from ..routes.nodes import _provision_node_multi_tenant, _provision_node_legacy_task
+        import asyncio
+
+        prov_settings = get_settings()
+        if prov_settings.multi_tenant:
+            await _provision_node_multi_tenant(db, node, user.id, user.username)
+            await db.refresh(node)
+        else:
+            asyncio.create_task(_provision_node_legacy_task(node.id, user.id, user.username))
+
     # Get stats if node is running
     stats = {"active_grants": 0, "pending_grants": 0}
     if node and node.status == NodeStatus.RUNNING and node.admin_token_encrypted:
@@ -332,6 +344,7 @@ async def dashboard_home(
         except (DecryptionError, NodeClientError):
             pass
 
+    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/home.html",
         {
@@ -340,6 +353,7 @@ async def dashboard_home(
             "node": node,
             "stats": stats,
             "active_page": "home",
+            "is_admin": settings.is_admin(user.username),
         },
     )
 
@@ -350,10 +364,15 @@ async def dashboard_grants(
     db: Annotated[AsyncSession, Depends(get_db)],
     status_filter: str | None = None,
 ):
-    """Show grants management page."""
+    """Show grants management page (admin only)."""
     user = await get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+
+    # Only admins can access grants page
+    settings = get_settings()
+    if not settings.is_admin(user.username):
+        return RedirectResponse(url="/dashboard", status_code=303)
 
     result = await db.execute(select(Node).where(Node.user_id == user.id))
     node = result.scalar_one_or_none()
@@ -384,6 +403,7 @@ async def dashboard_grants(
             "grants": grants,
             "status_filter": status_filter,
             "active_page": "grants",
+            "is_admin": True,  # Only admins reach here
         },
     )
 
@@ -398,12 +418,14 @@ async def dashboard_tokens(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
+    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/tokens.html",
         {
             "request": request,
             "user": user,
             "active_page": "tokens",
+            "is_admin": settings.is_admin(user.username),
         },
     )
 
@@ -437,6 +459,7 @@ async def dashboard_audit(
         except (DecryptionError, NodeClientError):
             pass
 
+    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/audit.html",
         {
@@ -446,6 +469,7 @@ async def dashboard_audit(
             "limit": limit,
             "offset": offset,
             "active_page": "audit",
+            "is_admin": settings.is_admin(user.username),
         },
     )
 
@@ -463,6 +487,7 @@ async def dashboard_settings(
     result = await db.execute(select(Node).where(Node.user_id == user.id))
     node = result.scalar_one_or_none()
 
+    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/settings.html",
         {
@@ -470,6 +495,7 @@ async def dashboard_settings(
             "user": user,
             "node": node,
             "active_page": "settings",
+            "is_admin": settings.is_admin(user.username),
         },
     )
 
@@ -508,12 +534,11 @@ async def onboarding_step2(
 
     # Trigger provisioning if node is pending
     if node and node.status == NodeStatus.PENDING:
-        from ..config import get_settings
         from ..routes.nodes import _provision_node_multi_tenant, _provision_node_legacy_task
         import asyncio
 
-        settings = get_settings()
-        if settings.multi_tenant:
+        prov_settings = get_settings()
+        if prov_settings.multi_tenant:
             # Multi-tenant: instant provisioning
             await _provision_node_multi_tenant(db, node, user.id, user.username)
             await db.refresh(node)
@@ -554,10 +579,44 @@ async def landing_page(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Show landing page or redirect to dashboard if logged in."""
+    """Show docs landing page or redirect to dashboard if logged in."""
     user = await get_current_user_from_cookie(request, db)
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    # For now, redirect to login. A proper landing page can be added later.
-    return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse(
+        "docs/home.html",
+        {"request": request},
+    )
+
+
+@router.get("/docs", response_class=HTMLResponse)
+async def docs_page(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Show docs page (accessible to everyone, logged in or not)."""
+    user = await get_current_user_from_cookie(request, db)
+
+    if user:
+        # Get the user's node for personalized URLs
+        result = await db.execute(select(Node).where(Node.user_id == user.id))
+        node = result.scalar_one_or_none()
+
+        settings = get_settings()
+        return templates.TemplateResponse(
+            "dashboard/docs.html",
+            {
+                "request": request,
+                "user": user,
+                "node": node,
+                "active_page": "docs",
+                "is_admin": settings.is_admin(user.username),
+            },
+        )
+
+    # Not logged in - show standalone docs page
+    return templates.TemplateResponse(
+        "docs/home.html",
+        {"request": request, "user": None, "node": None},
+    )

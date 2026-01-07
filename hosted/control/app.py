@@ -6,6 +6,8 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from time import time
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,9 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import get_settings
+
+# Static files directory
+STATIC_DIR = Path(__file__).parent / "static"
 from .database import close_db
 from .services import start_health_checker, stop_health_checker
 
@@ -108,6 +113,9 @@ def create_app() -> FastAPI:
         version="0.3.0",
         lifespan=lifespan,
         debug=settings.debug,
+        # Disable default /docs (Swagger UI) so we can use /docs for our docs page
+        # API docs available at /api-docs instead
+        docs_url="/api-docs",
     )
 
     # Add rate limiting middleware
@@ -132,6 +140,9 @@ def create_app() -> FastAPI:
 
     # Register dashboard routes (HTML pages)
     app.include_router(dashboard_router, tags=["dashboard"])
+
+    # Mount static files
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/health")
     async def health():
