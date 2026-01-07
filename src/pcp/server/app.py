@@ -453,13 +453,25 @@ def create_app(
     @app.get("/.well-known/openid-configuration")
     @app.get("/.well-known/openid-configuration/{path:path}")
     async def oauth_discovery_not_supported(request: Request, path: str = ""):
-        """Return 404 for all OAuth discovery endpoints."""
-        return Response(status_code=404)
+        """Return 404 for all OAuth discovery endpoints with proper JSON error."""
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "not_found",
+                "error_description": "OAuth is not supported. Use Bearer token authentication.",
+            },
+        )
 
     @app.post("/register")
     async def oauth_register_not_supported():
-        """Return 404 for OAuth dynamic client registration."""
-        return Response(status_code=404)
+        """OAuth dynamic client registration - not supported, return proper error."""
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "OAuth dynamic client registration is not supported. Use Bearer token authentication.",
+            },
+        )
 
     @app.get("/api/describe")
     async def describe(token: Token | None = Depends(get_token)):
@@ -958,35 +970,6 @@ def create_app(
     async def health():
         """Health check endpoint."""
         return {"status": "healthy"}
-
-    # OAuth discovery endpoints - return proper error responses so clients
-    # (like Claude Code) that try OAuth discovery fail gracefully and fall
-    # back to Bearer token auth instead of crashing with parse errors.
-    # See: https://github.com/anthropics/claude-code/issues/2831
-
-    @app.get("/.well-known/oauth-authorization-server")
-    @app.get("/.well-known/oauth-protected-resource")
-    @app.get("/.well-known/openid-configuration")
-    async def oauth_discovery_not_supported():
-        """OAuth discovery endpoints - return proper error for graceful fallback."""
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": "invalid_request",
-                "error_description": "OAuth is not supported. Use Bearer token authentication.",
-            },
-        )
-
-    @app.post("/register")
-    async def oauth_register_not_supported():
-        """OAuth dynamic client registration - return proper error for graceful fallback."""
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "OAuth dynamic client registration is not supported. Use Bearer token authentication.",
-            },
-        )
 
     # Mount MCP HTTP endpoint
     from contextlib import asynccontextmanager
