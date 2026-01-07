@@ -435,6 +435,75 @@ def create_app(
             },
         }
 
+    @app.get("/.well-known/oauth-protected-resource")
+    async def well_known_oauth_protected_resource():
+        """
+        OAuth 2.0 Protected Resource Metadata (RFC 9728).
+
+        MCP clients discover auth requirements via this endpoint.
+        PCP uses Bearer tokens (not full OAuth), so we return metadata
+        pointing to our token endpoint without an authorization_servers list.
+        """
+        return {
+            "resource": _public_url,
+            "authorization_servers": [],
+            "bearer_methods_supported": ["header"],
+            "resource_documentation": f"{_public_url}/.well-known/pcp",
+        }
+
+    @app.get("/.well-known/oauth-protected-resource/{path:path}")
+    async def well_known_oauth_protected_resource_path(path: str):
+        """OAuth protected resource metadata with path suffix."""
+        return {
+            "resource": _public_url,
+            "authorization_servers": [],
+            "bearer_methods_supported": ["header"],
+            "resource_documentation": f"{_public_url}/.well-known/pcp",
+        }
+
+    @app.get("/.well-known/oauth-authorization-server")
+    async def well_known_oauth_authorization_server():
+        """
+        OAuth 2.0 Authorization Server Metadata (RFC 8414).
+
+        Returns a proper OAuth error since PCP uses pre-shared Bearer tokens
+        rather than OAuth authorization flows.
+        """
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "not_supported",
+                "error_description": "This server uses Bearer token authentication. Obtain a token from the grants API or dashboard.",
+            },
+        )
+
+    @app.get("/.well-known/oauth-authorization-server/{path:path}")
+    async def well_known_oauth_authorization_server_path(path: str):
+        """OAuth authorization server metadata with path suffix."""
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "not_supported",
+                "error_description": "This server uses Bearer token authentication. Obtain a token from the grants API or dashboard.",
+            },
+        )
+
+    @app.get("/.well-known/openid-configuration")
+    @app.get("/.well-known/openid-configuration/{path:path}")
+    async def well_known_openid_configuration(path: str = ""):
+        """
+        OpenID Connect Discovery 1.0.
+
+        Returns a proper OAuth error since PCP doesn't support OIDC.
+        """
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "not_supported",
+                "error_description": "OpenID Connect is not supported. Use Bearer token authentication.",
+            },
+        )
+
     @app.get("/api/describe")
     async def describe(token: Token | None = Depends(get_token)):
         """Get node capabilities."""
@@ -932,6 +1001,35 @@ def create_app(
     async def health():
         """Health check endpoint."""
         return {"status": "healthy"}
+
+    # OAuth discovery endpoints - return proper error responses so clients
+    # (like Claude Code) that try OAuth discovery fail gracefully and fall
+    # back to Bearer token auth instead of crashing with parse errors.
+    # See: https://github.com/anthropics/claude-code/issues/2831
+
+    @app.get("/.well-known/oauth-authorization-server")
+    @app.get("/.well-known/oauth-protected-resource")
+    @app.get("/.well-known/openid-configuration")
+    async def oauth_discovery_not_supported():
+        """OAuth discovery endpoints - return proper error for graceful fallback."""
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "invalid_request",
+                "error_description": "OAuth is not supported. Use Bearer token authentication.",
+            },
+        )
+
+    @app.post("/register")
+    async def oauth_register_not_supported():
+        """OAuth dynamic client registration - return proper error for graceful fallback."""
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request",
+                "error_description": "OAuth dynamic client registration is not supported. Use Bearer token authentication.",
+            },
+        )
 
     # Mount MCP HTTP endpoint
     from contextlib import asynccontextmanager
