@@ -115,6 +115,7 @@ class SubdomainProxyMiddleware(BaseHTTPMiddleware):
                 forward_headers[key] = value
 
         forward_headers["X-User-Id"] = user_id
+        forward_headers["X-Forwarded-Host"] = host
 
         # Get request body if present
         body = await request.body()

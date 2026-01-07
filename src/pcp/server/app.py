@@ -435,8 +435,15 @@ def create_app(
             },
         }
 
+    def _get_public_url(request: Request) -> str:
+        """Get the public URL, preferring X-Forwarded-Host for proxied requests."""
+        forwarded_host = request.headers.get("x-forwarded-host")
+        if forwarded_host:
+            return f"https://{forwarded_host}"
+        return _public_url
+
     @app.get("/.well-known/oauth-protected-resource")
-    async def well_known_oauth_protected_resource():
+    async def well_known_oauth_protected_resource(request: Request):
         """
         OAuth 2.0 Protected Resource Metadata (RFC 9728).
 
@@ -444,21 +451,23 @@ def create_app(
         PCP uses Bearer tokens (not full OAuth), so we return metadata
         pointing to our token endpoint without an authorization_servers list.
         """
+        public_url = _get_public_url(request)
         return {
-            "resource": _public_url,
+            "resource": public_url,
             "authorization_servers": [],
             "bearer_methods_supported": ["header"],
-            "resource_documentation": f"{_public_url}/.well-known/pcp",
+            "resource_documentation": f"{public_url}/.well-known/pcp",
         }
 
     @app.get("/.well-known/oauth-protected-resource/{path:path}")
-    async def well_known_oauth_protected_resource_path(path: str):
+    async def well_known_oauth_protected_resource_path(request: Request, path: str):
         """OAuth protected resource metadata with path suffix."""
+        public_url = _get_public_url(request)
         return {
-            "resource": _public_url,
+            "resource": public_url,
             "authorization_servers": [],
             "bearer_methods_supported": ["header"],
-            "resource_documentation": f"{_public_url}/.well-known/pcp",
+            "resource_documentation": f"{public_url}/.well-known/pcp",
         }
 
     @app.get("/.well-known/oauth-authorization-server")
