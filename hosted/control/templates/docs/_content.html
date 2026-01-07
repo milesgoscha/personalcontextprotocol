@@ -4,7 +4,7 @@
 <div class="text-sm text-dark-500 mb-2">Get started</div>
 
 <!-- Title -->
-<h1 class="text-3xl font-bold text-dark-50 mb-8">What is the Personal Context Protocol (PCP)?</h1>
+<h1 class="text-2xl sm:text-3xl font-bold text-dark-50 mb-6 sm:mb-8">What is the Personal Context Protocol (PCP)?</h1>
 
 <!-- Content -->
 <div class="prose prose-invert prose-dark max-w-none">
@@ -21,10 +21,10 @@
     </p>
 
     <!-- Architecture diagram - hub design -->
-    <div id="architecture" class="my-10 py-8 px-6 bg-dark-900 border border-dark-800 rounded-lg overflow-hidden">
-        <div class="flex items-center justify-center gap-8">
+    <div id="architecture" class="my-8 sm:my-10 py-6 sm:py-8 px-4 sm:px-6 bg-dark-900 border border-dark-800 rounded-lg overflow-hidden">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
             <!-- Left: AI Apps -->
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-row sm:flex-col gap-2 flex-wrap justify-center">
                 <div class="flex items-center gap-2 px-3 py-2 bg-dark-850 border border-dark-700 rounded-lg">
                     <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
                     <span class="text-xs font-medium text-dark-200">Claude Code</span>
@@ -39,13 +39,13 @@
                 </div>
             </div>
 
-            <!-- Bidirectional arrows -->
-            <div class="flex flex-col items-center gap-1 text-dark-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <!-- Bidirectional arrows - rotate on mobile -->
+            <div class="flex flex-row sm:flex-col items-center gap-1 text-dark-500">
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
                 </svg>
                 <span class="text-[10px] text-dark-600">read & write</span>
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 rotate-90 sm:rotate-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
                 </svg>
             </div>
@@ -163,7 +163,7 @@
     <!-- Claude Desktop -->
     <h3 id="claude-desktop" class="text-lg font-medium text-dark-200 mt-8 mb-3">Claude Desktop</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS):
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS):
     </p>
     <div class="relative group" x-data="{ copied: false }">
         <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
@@ -184,7 +184,7 @@
     <!-- Cursor -->
     <h3 id="cursor" class="text-lg font-medium text-dark-200 mt-8 mb-3">Cursor</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">.cursor/mcp.json</code> or <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.cursor/mcp.json</code>:
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">.cursor/mcp.json</code> or <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/.cursor/mcp.json</code>:
     </p>
     <div class="relative group" x-data="{ copied: false }">
         <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
@@ -204,7 +204,7 @@
     <!-- VS Code / Copilot -->
     <h3 id="vscode" class="text-lg font-medium text-dark-200 mt-8 mb-3">VS Code (GitHub Copilot)</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">.vscode/mcp.json</code>:
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">.vscode/mcp.json</code>:
     </p>
     <div class="relative group" x-data="{ copied: false }">
         <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
@@ -225,7 +225,7 @@
     <!-- Windsurf -->
     <h3 id="windsurf" class="text-lg font-medium text-dark-200 mt-8 mb-3">Windsurf</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.codeium/windsurf/mcp_config.json</code>:
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/.codeium/windsurf/mcp_config.json</code>:
     </p>
     <div class="relative group" x-data="{ copied: false }">
         <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">{
@@ -256,7 +256,7 @@
     <!-- OpenAI Codex CLI -->
     <h3 id="codex" class="text-lg font-medium text-dark-200 mt-8 mb-3">OpenAI Codex CLI</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs">~/.codex/config.toml</code>:
+        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/.codex/config.toml</code>:
     </p>
     <div class="relative group" x-data="{ copied: false }">
         <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">[mcp_servers.pcp]

@@ -3,20 +3,21 @@
 {% block title %}What is PCP? - Personal Context Protocol{% endblock %}
 
 {% block body %}
-<div class="min-h-screen bg-dark-950 flex flex-col">
+<div class="min-h-screen bg-dark-950 flex flex-col" x-data="{ mobileMenuOpen: false }">
     <!-- Header -->
     <header class="border-b border-dark-800 bg-dark-950 sticky top-0 z-50">
-        <div class="max-w-[1400px] mx-auto px-6">
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6">
             <!-- Top bar -->
-            <div class="h-14 flex items-center justify-between gap-8">
+            <div class="h-14 flex items-center justify-between gap-4 sm:gap-8">
                 <!-- Logo -->
-                <a href="/" class="flex items-center gap-1 flex-shrink-0">
+                <a href="/" class="flex items-center gap-1.5 flex-shrink-0">
                     <img src="/static/img/pcp-logo.svg" alt="PCP" class="w-6 h-6">
-                    <span class="font-semibold text-dark-100">Personal Context Protocol</span>
+                    <span class="font-semibold text-dark-100 hidden sm:inline">Personal Context Protocol</span>
+                    <span class="font-semibold text-dark-100 sm:hidden">PCP</span>
                 </a>
 
-                <!-- Search (placeholder) -->
-                <div class="hidden md:flex flex-1 max-w-md">
+                <!-- Search (placeholder) - hidden on mobile -->
+                <div class="hidden lg:flex flex-1 max-w-md">
                     <div class="w-full relative">
                         <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-900 border border-dark-800 text-dark-500 text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,8 +29,8 @@
                     </div>
                 </div>
 
-                <!-- Right side -->
-                <div class="flex items-center gap-4">
+                <!-- Desktop nav -->
+                <div class="hidden sm:flex items-center gap-4">
                     <a href="https://github.com/milesgoscha/personalcontextprotocol"
                        target="_blank"
                        class="text-sm text-dark-400 hover:text-dark-200 transition-colors">
@@ -45,8 +46,36 @@
                         Sign up
                     </a>
                 </div>
+
+                <!-- Mobile menu button -->
+                <div class="flex sm:hidden items-center gap-2">
+                    <a href="/signup"
+                       class="text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors px-3 py-1.5 rounded-md">
+                        Sign up
+                    </a>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="p-2 -mr-2 text-dark-400 hover:text-dark-200">
+                        <svg x-show="!mobileMenuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        <svg x-show="mobileMenuOpen" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
+            <!-- Mobile menu -->
+            <div x-show="mobileMenuOpen" x-cloak
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 -translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 -translate-y-2"
+                 class="sm:hidden border-t border-dark-800 py-3 space-y-1">
+                <a href="/login" class="block py-2 text-sm text-dark-300 hover:text-dark-100">Sign in</a>
+                <a href="https://github.com/milesgoscha/personalcontextprotocol" target="_blank" class="block py-2 text-sm text-dark-300 hover:text-dark-100">GitHub</a>
+            </div>
         </div>
     </header>
 
@@ -85,7 +114,7 @@
 
         <!-- Main content -->
         <main class="flex-1 min-w-0">
-            <article class="px-8 lg:px-12 py-10 max-w-3xl">
+            <article class="px-4 sm:px-6 lg:px-12 py-6 sm:py-10 max-w-3xl">
                 {% include "docs/_content.html" %}
             </article>
         </main>
