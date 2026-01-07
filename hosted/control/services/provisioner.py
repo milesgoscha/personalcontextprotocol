@@ -164,12 +164,14 @@ class Provisioner:
                 pass
 
             # Start new container
+            public_url = f"https://{username}.{settings.pcp_domain}"
             container: Container = self.client.containers.run(
                 image=settings.pcp_image,
                 name=container_name,
                 detach=True,
                 environment={
                     "PCP_NODE_ID": node_id,
+                    "PCP_PUBLIC_URL": public_url,
                     # Allow initial token request from control plane
                     "PCP_ALLOW_INITIAL_TOKEN": "true",
                 },
