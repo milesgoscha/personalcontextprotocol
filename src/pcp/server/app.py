@@ -442,85 +442,23 @@ def create_app(
             return f"https://{forwarded_host}"
         return _public_url
 
+    # OAuth discovery endpoints - return 404 for all OAuth endpoints so clients
+    # fall back to Bearer token authentication instead of trying OAuth flow.
+    # See: https://github.com/anthropics/claude-code/issues/2831
+
     @app.get("/.well-known/oauth-protected-resource")
-    async def well_known_oauth_protected_resource(request: Request):
-        """
-        OAuth 2.0 Protected Resource Metadata (RFC 9728).
-
-        MCP clients discover auth requirements via this endpoint.
-        PCP uses Bearer tokens (not full OAuth), so we return metadata
-        pointing to our token endpoint without an authorization_servers list.
-        """
-        public_url = _get_public_url(request)
-        return {
-            "resource": public_url,
-            "authorization_servers": [],
-            "bearer_methods_supported": ["header"],
-            "resource_documentation": f"{public_url}/.well-known/pcp",
-        }
-
     @app.get("/.well-known/oauth-protected-resource/{path:path}")
-    async def well_known_oauth_protected_resource_path(request: Request, path: str):
-        """OAuth protected resource metadata with path suffix."""
-        public_url = _get_public_url(request)
-        return {
-            "resource": public_url,
-            "authorization_servers": [],
-            "bearer_methods_supported": ["header"],
-            "resource_documentation": f"{public_url}/.well-known/pcp",
-        }
-
     @app.get("/.well-known/oauth-authorization-server")
-    async def well_known_oauth_authorization_server():
-        """
-        OAuth 2.0 Authorization Server Metadata (RFC 8414).
-
-        Returns a proper OAuth error since PCP uses pre-shared Bearer tokens
-        rather than OAuth authorization flows.
-        """
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": "not_supported",
-                "error_description": "This server uses Bearer token authentication. Obtain a token from the grants API or dashboard.",
-            },
-        )
-
     @app.get("/.well-known/oauth-authorization-server/{path:path}")
-    async def well_known_oauth_authorization_server_path(path: str):
-        """OAuth authorization server metadata with path suffix."""
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": "not_supported",
-                "error_description": "This server uses Bearer token authentication. Obtain a token from the grants API or dashboard.",
-            },
-        )
-
     @app.get("/.well-known/openid-configuration")
     @app.get("/.well-known/openid-configuration/{path:path}")
-    async def well_known_openid_configuration(path: str = ""):
-        """
-        OpenID Connect Discovery 1.0.
-
-        Returns a proper OAuth error since PCP doesn't support OIDC.
-        """
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": "not_supported",
-                "error_description": "OpenID Connect is not supported. Use Bearer token authentication.",
-            },
-        )
+    async def oauth_discovery_not_supported(request: Request, path: str = ""):
+        """Return 404 for all OAuth discovery endpoints."""
+        return Response(status_code=404)
 
     @app.post("/register")
     async def oauth_register_not_supported():
-        """
-        OAuth 2.0 Dynamic Client Registration (RFC 7591).
-
-        Returns 404 to signal that dynamic registration is not supported.
-        Clients should use pre-configured Bearer tokens instead.
-        """
+        """Return 404 for OAuth dynamic client registration."""
         return Response(status_code=404)
 
     @app.get("/api/describe")
