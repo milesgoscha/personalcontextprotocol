@@ -513,6 +513,16 @@ def create_app(
             },
         )
 
+    @app.post("/register")
+    async def oauth_register_not_supported():
+        """
+        OAuth 2.0 Dynamic Client Registration (RFC 7591).
+
+        Returns 404 to signal that dynamic registration is not supported.
+        Clients should use pre-configured Bearer tokens instead.
+        """
+        return Response(status_code=404)
+
     @app.get("/api/describe")
     async def describe(token: Token | None = Depends(get_token)):
         """Get node capabilities."""
