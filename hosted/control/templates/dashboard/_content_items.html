@@ -1,0 +1,163 @@
+{% if items %}
+<div class="space-y-3">
+    {% for item in items %}
+    <div class="border border-dark-800 rounded-lg bg-dark-900 overflow-hidden"
+         x-data="{ expanded: false }">
+        <!-- Header (clickable to expand) -->
+        <button @click="expanded = !expanded"
+                class="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-dark-850 transition-colors">
+            <!-- Type badge -->
+            {% if item.envelope.type == 'event' %}
+            <span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                event
+            </span>
+            {% elif item.envelope.type == 'learning' %}
+            <span class="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                learning
+            </span>
+            {% elif item.envelope.type == 'reflection' %}
+            <span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                reflection
+            </span>
+            {% else %}
+            <span class="px-2 py-0.5 text-xs rounded bg-dark-700 text-dark-300 border border-dark-600">
+                {{ item.envelope.type }}
+            </span>
+            {% endif %}
+
+            <!-- Summary/Statement/Content -->
+            <span class="flex-1 text-sm text-dark-200 truncate">
+                {% if item.payload.summary %}
+                    {{ item.payload.summary }}
+                {% elif item.payload.statement %}
+                    {{ item.payload.statement }}
+                {% elif item.payload.content %}
+                    {{ item.payload.content[:100] }}{% if item.payload.content|length > 100 %}...{% endif %}
+                {% elif item.payload.prompt %}
+                    {{ item.payload.prompt[:100] }}{% if item.payload.prompt|length > 100 %}...{% endif %}
+                {% else %}
+                    <span class="text-dark-500 italic">No summary available</span>
+                {% endif %}
+            </span>
+
+            <!-- Timestamp -->
+            <span class="text-xs text-dark-500 flex-shrink-0">
+                {{ item.envelope.created_at[:10] }}
+            </span>
+
+            <!-- Expand icon -->
+            <svg class="w-4 h-4 text-dark-500 transition-transform flex-shrink-0"
+                 :class="expanded && 'rotate-180'"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <!-- Expanded detail -->
+        <div x-show="expanded" x-collapse class="border-t border-dark-800">
+            <div class="px-4 py-4">
+                <!-- Metadata row -->
+                <div class="flex flex-wrap gap-4 text-xs text-dark-500 mb-4">
+                    {% if item.envelope.id %}
+                    <div>
+                        <span class="text-dark-600">ID:</span>
+                        <span class="font-mono">{{ item.envelope.id[:12] }}...</span>
+                    </div>
+                    {% endif %}
+                    {% if item.envelope.created_at %}
+                    <div>
+                        <span class="text-dark-600">Created:</span>
+                        <span>{{ item.envelope.created_at[:19] }}</span>
+                    </div>
+                    {% endif %}
+                    {% if item.payload.event_kind %}
+                    <div>
+                        <span class="text-dark-600">Kind:</span>
+                        <span class="text-blue-400">{{ item.payload.event_kind }}</span>
+                    </div>
+                    {% endif %}
+                    {% if item.payload.key %}
+                    <div>
+                        <span class="text-dark-600">Key:</span>
+                        <span class="text-purple-400 font-mono">{{ item.payload.key }}</span>
+                    </div>
+                    {% endif %}
+                    {% if item.payload.category %}
+                    <div>
+                        <span class="text-dark-600">Category:</span>
+                        <span class="text-purple-400">{{ item.payload.category }}</span>
+                    </div>
+                    {% endif %}
+                    {% if item.payload.scope %}
+                    <div>
+                        <span class="text-dark-600">Scope:</span>
+                        <span class="text-amber-400">{{ item.payload.scope }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tags -->
+                {% if item.payload.tags %}
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    {% for tag in item.payload.tags %}
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-dark-800 text-dark-300 border border-dark-700">
+                        {{ tag }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Full payload JSON -->
+                <details class="group">
+                    <summary class="cursor-pointer text-xs text-dark-500 hover:text-dark-400 mb-2 flex items-center gap-1">
+                        <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        View raw payload
+                    </summary>
+                    <pre class="text-xs text-dark-400 overflow-auto max-h-64 bg-dark-850 rounded-md p-3 border border-dark-700">{{ item.payload | tojson(indent=2) }}</pre>
+                </details>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if next_page %}
+<div class="mt-6 text-center">
+    <button hx-get="/api/v1/node/content?type={{ current_type }}&cursor={{ next_page.cursor }}"
+            hx-target="#content-list"
+            hx-swap="innerHTML"
+            class="inline-flex items-center gap-2 px-4 py-2 text-sm text-dark-400 hover:text-dark-200 bg-dark-900 border border-dark-800 rounded-lg hover:bg-dark-850 transition-colors">
+        <span>Load more</span>
+        {% if next_page.remaining_estimate %}
+        <span class="text-dark-500">({{ next_page.remaining_estimate }} remaining)</span>
+        {% endif %}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+</div>
+{% endif %}
+
+<!-- Count summary -->
+<div class="mt-4 text-center text-xs text-dark-600">
+    Showing {{ items|length }} item{% if items|length != 1 %}s{% endif %}{% if count %} of {{ count }} total{% endif %}
+</div>
+
+{% else %}
+<!-- Empty state -->
+<div class="bg-dark-900 rounded-lg border border-dark-800 p-12 text-center">
+    <div class="w-16 h-16 mx-auto rounded-xl bg-dark-800 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6M9 8h6M9 16h3"/>
+        </svg>
+    </div>
+    <h3 class="text-base font-medium text-dark-100 mb-1">No content yet</h3>
+    <p class="text-sm text-dark-400 max-w-sm mx-auto">
+        Events, learnings, and reflections will appear here as AI agents interact with your PCP node.
+    </p>
+</div>
+{% endif %}

@@ -104,6 +104,19 @@
                     Activity
                 </a>
 
+                <a href="/dashboard/content"
+                   class="group flex items-center gap-2.5 px-2.5 py-1.5 rounded text-sm transition-colors
+                          {% if active_page == 'content' %}
+                          text-primary-500 font-medium
+                          {% else %}
+                          text-dark-400 hover:text-dark-200 hover:bg-dark-850
+                          {% endif %}">
+                    <svg class="w-4 h-4 {% if active_page == 'content' %}text-primary-500{% else %}text-dark-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    Your Data
+                </a>
+
                 <a href="/dashboard/tokens"
                    class="group flex items-center gap-2.5 px-2.5 py-1.5 rounded text-sm transition-colors
                           {% if active_page == 'tokens' %}

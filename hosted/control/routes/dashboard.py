@@ -498,6 +498,32 @@ async def dashboard_settings(
     )
 
 
+@router.get("/dashboard/content", response_class=HTMLResponse)
+async def dashboard_content(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Show content viewer page."""
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    result = await db.execute(select(Node).where(Node.user_id == user.id))
+    node = result.scalar_one_or_none()
+
+    settings = get_settings()
+    return templates.TemplateResponse(
+        "dashboard/content.html",
+        {
+            "request": request,
+            "user": user,
+            "node": node,
+            "active_page": "content",
+            "is_admin": settings.is_admin(user.username),
+        },
+    )
+
+
 # --- Onboarding Pages ---
 
 

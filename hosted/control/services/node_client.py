@@ -405,3 +405,40 @@ class NodeClient:
             raise NodeClientError(f"Failed to export data: {e}")
         except httpx.RequestError as e:
             raise NodeUnreachableError(f"Cannot reach node: {e}")
+
+    async def query(
+        self,
+        object_types: list[str],
+        disclosure: str = "summary",
+        limit: int = 20,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """Query objects from the node.
+
+        Args:
+            object_types: Types to query ["event", "learning", "reflection", "identity"]
+            disclosure: "summary", "detail", or "raw"
+            limit: Max items to return
+            cursor: Pagination cursor
+
+        Returns:
+            Dict with items, count, and optional next_page info.
+        """
+        try:
+            payload: dict[str, Any] = {
+                "object_types": object_types,
+                "disclosure": disclosure,
+                "limit": limit,
+            }
+            if cursor:
+                payload["cursor"] = cursor
+
+            response = await self.client.post("/api/query", json=payload)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise NodeAuthError("Admin token invalid or expired")
+            raise NodeClientError(f"Query failed: {e}")
+        except httpx.RequestError as e:
+            raise NodeUnreachableError(f"Cannot reach node: {e}")

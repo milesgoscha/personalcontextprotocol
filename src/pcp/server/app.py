@@ -171,7 +171,7 @@ def get_current_user_id() -> str | None:
 
 from pcp.auth.audit import AuditLog
 from pcp.auth.grants import Grant, GrantStatus, GrantStore, TrustTier
-from pcp.auth.scopes import Operation, validate_scope, describe_scope
+from pcp.auth.scopes import Operation, validate_scope, describe_scope, ScopeSet
 from pcp.auth.tokens import Token, TokenStore, init_token_store
 from pcp.models.envelope import ObjectType
 
@@ -362,7 +362,7 @@ def create_app(
                 return Token(
                     token_id="control-plane",
                     subject="control-plane",
-                    scopes=["pcp:admin"],
+                    scopes=ScopeSet.from_strings(["pcp:admin"]),
                     issued_at=datetime.now(UTC),
                     expires_at=datetime.now(UTC) + timedelta(hours=1),
                     metadata={"trust_tier": "local"},

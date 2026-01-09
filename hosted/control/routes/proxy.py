@@ -9,8 +9,9 @@ In legacy mode, routes to per-user Docker containers.
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +21,9 @@ from ..config import get_settings
 from ..database import get_db
 from ..models import Node, NodeStatus
 from ..services.encryption import decrypt_token, DecryptionError
-from ..services.node_client import NodeClient, NodeClientError, NodeAuthError
+from ..services.node_client import NodeClient, NodeClientError, NodeAuthError, NodeUnreachableError
+
+templates = Jinja2Templates(directory="control/templates")
 
 router = APIRouter()
 
@@ -559,4 +562,63 @@ async def export_data(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(e),
+        )
+
+
+# --- Content Routes ---
+
+
+@router.get("/content", response_class=HTMLResponse)
+async def get_content(
+    request: Request,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    type: str = Query(default="all"),
+    cursor: str | None = Query(default=None),
+    limit: int = Query(default=20, le=50),
+) -> HTMLResponse:
+    """Fetch content items for HTMX partial rendering."""
+    internal_url, admin_token, extra_headers = await _get_node_client_context(
+        db, current_user.id, current_user.username
+    )
+
+    # Determine object types to query
+    if type == "all":
+        object_types = ["event", "learning", "reflection"]
+    else:
+        object_types = [type]
+
+    try:
+        async with NodeClient(internal_url, admin_token, extra_headers) as client:
+            result = await client.query(
+                object_types=object_types,
+                disclosure="detail",
+                limit=limit,
+                cursor=cursor,
+            )
+
+        return templates.TemplateResponse(
+            "dashboard/_content_items.html",
+            {
+                "request": request,
+                "items": result.get("items", []),
+                "count": result.get("count", 0),
+                "next_page": result.get("next_page"),
+                "current_type": type,
+            },
+        )
+    except NodeUnreachableError:
+        return HTMLResponse(
+            content='<div class="p-6 text-center text-red-500">Node unreachable</div>',
+            status_code=503,
+        )
+    except NodeAuthError:
+        return HTMLResponse(
+            content='<div class="p-6 text-center text-red-500">Session expired. Please refresh.</div>',
+            status_code=401,
+        )
+    except NodeClientError as e:
+        return HTMLResponse(
+            content=f'<div class="p-6 text-center text-red-500">Failed to load content: {e}</div>',
+            status_code=502,
         )
