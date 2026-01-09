@@ -97,8 +97,8 @@ class SubdomainProxyMiddleware(BaseHTTPMiddleware):
         # This allows OAuth discovery even for subdomains without active nodes
         # MCP clients need discovery to know WHERE to authenticate
         if request.url.path == "/.well-known/oauth-protected-resource":
-            # Use the same scheme as the incoming request
-            scheme = request.url.scheme or "https"
+            # Use X-Forwarded-Proto header (set by Traefik) or fall back to request scheme
+            scheme = request.headers.get("X-Forwarded-Proto", request.url.scheme) or "https"
             return JSONResponse(
                 content={
                     "resource": f"{scheme}://{host}",
@@ -110,7 +110,7 @@ class SubdomainProxyMiddleware(BaseHTTPMiddleware):
         # Also serve authorization server metadata on subdomains
         # Some clients fetch this from the resource URL instead of the auth server
         if request.url.path == "/.well-known/oauth-authorization-server":
-            scheme = request.url.scheme or "https"
+            scheme = request.headers.get("X-Forwarded-Proto", request.url.scheme) or "https"
             base_url = f"{scheme}://{settings.pcp_domain}"
             return JSONResponse(
                 content={

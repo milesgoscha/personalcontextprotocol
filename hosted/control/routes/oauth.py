@@ -192,8 +192,8 @@ async def _get_node_client_context(
 async def oauth_authorization_server_metadata(request: Request):
     """Return OAuth 2.1 Authorization Server Metadata (RFC 8414)."""
     settings = get_settings()
-    # Use the same scheme as the incoming request (http for dev, https for prod)
-    scheme = request.url.scheme or "https"
+    # Use X-Forwarded-Proto header (set by Traefik) or fall back to request scheme
+    scheme = request.headers.get("X-Forwarded-Proto", request.url.scheme) or "https"
     base_url = f"{scheme}://{settings.pcp_domain}"
 
     return {
