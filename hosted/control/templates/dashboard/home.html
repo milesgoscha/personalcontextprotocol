@@ -195,33 +195,28 @@
             <h3 class="text-sm font-medium text-dark-200">Quick Start</h3>
         </div>
         <div class="p-5 space-y-5">
-            <!-- Step 1: API Token -->
+            <!-- Step 1: Connect Claude Code -->
             <div class="flex gap-4">
                 <div class="w-6 h-6 rounded bg-primary-500/20 border border-primary-500/30 flex items-center justify-center flex-shrink-0 text-xs font-medium text-primary-400">1</div>
-                <div>
-                    <p class="text-sm font-medium text-dark-100">Create an API token</p>
-                    <p class="text-sm text-dark-400 mt-0.5">Generate a token to authenticate your AI tools.</p>
-                    <a href="/dashboard/tokens" class="inline-flex items-center gap-1 text-sm text-primary-500 hover:text-primary-400 mt-1.5 font-medium">
-                        Go to Tokens
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-            <!-- Step 2: Claude CLI -->
-            <div class="flex gap-4">
-                <div class="w-6 h-6 rounded bg-dark-800 flex items-center justify-center flex-shrink-0 text-xs font-medium text-dark-400">2</div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-dark-100">Connect Claude Code</p>
-                    <p class="text-sm text-dark-400 mt-0.5">Run this command in your terminal (replace <code class="text-dark-300 bg-dark-800 px-1 py-0.5 rounded text-xs">&lt;token&gt;</code> with your token):</p>
+                    <p class="text-sm text-dark-400 mt-0.5">Run this command in your terminal:</p>
                     <div class="relative group mt-3" x-data="{ copied: false }">
-                        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">claude mcp add --transport http --header "Authorization: Bearer &lt;token&gt;" --scope user pcp {{ node.public_url }}/mcp/mcp</pre>
-                        <button @click="navigator.clipboard.writeText(`claude mcp add --transport http --header &quot;Authorization: Bearer <token>&quot; --scope user pcp {{ node.public_url }}/mcp/mcp`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+                        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">claude mcp add pcp {{ node.public_url }}/mcp/mcp</pre>
+                        <button @click="navigator.clipboard.writeText(`claude mcp add pcp {{ node.public_url }}/mcp/mcp`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
                             <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </button>
                     </div>
+                    <p class="text-xs text-dark-500 mt-2">Your browser will open to authorize the connection.</p>
+                </div>
+            </div>
+            <!-- Step 2: Authorize -->
+            <div class="flex gap-4">
+                <div class="w-6 h-6 rounded bg-dark-800 flex items-center justify-center flex-shrink-0 text-xs font-medium text-dark-400">2</div>
+                <div>
+                    <p class="text-sm font-medium text-dark-100">Authorize access</p>
+                    <p class="text-sm text-dark-400 mt-0.5">Choose your access level (read-only or full) and approve the connection.</p>
                 </div>
             </div>
             <!-- Step 3: More integrations -->
