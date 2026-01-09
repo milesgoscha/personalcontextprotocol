@@ -449,7 +449,7 @@ async def create_token(
     db: Annotated[AsyncSession, Depends(get_db)],
     subject: str = Form(...),
     hours: int = Form(24),
-    scopes: list[str] = Form(default=["query:event.*"]),
+    scopes: list[str] = Form(default=["query:event.*", "query:learning.*", "query:reflection.*", "query:identity", "observe:event", "learn:write", "reflect:write"]),
 ) -> HTMLResponse:
     """Create a new token for the user's node.
 
