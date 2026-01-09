@@ -1025,8 +1025,9 @@ def create_app(
     # Update the app's lifespan
     app.router.lifespan_context = lifespan
 
-    # Mount the MCP app
-    app.mount("/mcp", mcp_app)
+    # Mount the MCP app at root - MCP endpoint is at /mcp within the app
+    # This avoids trailing slash redirect issues that occur when mounting at /mcp
+    app.mount("/", mcp_app)
 
     return app
 
