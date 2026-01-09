@@ -145,9 +145,9 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 transition-opacity"
                          :class="admin ? 'opacity-50 pointer-events-none' : ''">
                         <!-- Read Events -->
-                        <button type="button" @click="scopes.events = !scopes.events"
-                                class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
-                                :class="scopes.events || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                        <label class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
+                               :class="scopes.events || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                            <input type="checkbox" name="scopes" value="query:event.*" x-model="scopes.events" class="sr-only">
                             <div>
                                 <span class="text-sm font-medium" :class="scopes.events || admin ? 'text-dark-100' : 'text-dark-200'">Read Events</span>
                                 <span class="block text-xs text-dark-500 mt-0.5">Activities and observations</span>
@@ -158,13 +158,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
-                            <input type="checkbox" name="scopes" value="query:event.*" x-model="scopes.events" class="sr-only">
-                        </button>
+                        </label>
 
                         <!-- Read Learnings -->
-                        <button type="button" @click="scopes.learnings = !scopes.learnings"
-                                class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
-                                :class="scopes.learnings || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                        <label class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
+                               :class="scopes.learnings || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                            <input type="checkbox" name="scopes" value="query:learning.*" x-model="scopes.learnings" class="sr-only">
                             <div>
                                 <span class="text-sm font-medium" :class="scopes.learnings || admin ? 'text-dark-100' : 'text-dark-200'">Read Learnings</span>
                                 <span class="block text-xs text-dark-500 mt-0.5">Facts and preferences</span>
@@ -175,13 +174,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
-                            <input type="checkbox" name="scopes" value="query:learning.*" x-model="scopes.learnings" class="sr-only">
-                        </button>
+                        </label>
 
                         <!-- Read Identity -->
-                        <button type="button" @click="scopes.identity = !scopes.identity"
-                                class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
-                                :class="scopes.identity || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                        <label class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
+                               :class="scopes.identity || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                            <input type="checkbox" name="scopes" value="query:identity" x-model="scopes.identity" class="sr-only">
                             <div>
                                 <span class="text-sm font-medium" :class="scopes.identity || admin ? 'text-dark-100' : 'text-dark-200'">Read Identity</span>
                                 <span class="block text-xs text-dark-500 mt-0.5">Name and profile</span>
@@ -192,13 +190,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
-                            <input type="checkbox" name="scopes" value="query:identity" x-model="scopes.identity" class="sr-only">
-                        </button>
+                        </label>
 
                         <!-- Write Events -->
-                        <button type="button" @click="scopes.writeEvents = !scopes.writeEvents"
-                                class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
-                                :class="scopes.writeEvents || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                        <label class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
+                               :class="scopes.writeEvents || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                            <input type="checkbox" name="scopes" value="observe:event" x-model="scopes.writeEvents" class="sr-only">
                             <div>
                                 <span class="text-sm font-medium" :class="scopes.writeEvents || admin ? 'text-dark-100' : 'text-dark-200'">Write Events</span>
                                 <span class="block text-xs text-dark-500 mt-0.5">Record new observations</span>
@@ -209,13 +206,12 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
-                            <input type="checkbox" name="scopes" value="observe:event" x-model="scopes.writeEvents" class="sr-only">
-                        </button>
+                        </label>
 
                         <!-- Write Learnings -->
-                        <button type="button" @click="scopes.writeLearnings = !scopes.writeLearnings"
-                                class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
-                                :class="scopes.writeLearnings || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                        <label class="relative flex items-center justify-between p-3 border rounded-md cursor-pointer transition-all text-left"
+                               :class="scopes.writeLearnings || admin ? 'border-primary-500/50 bg-primary-500/10' : 'border-dark-700 hover:border-dark-600 bg-dark-850'">
+                            <input type="checkbox" name="scopes" value="learn:write" x-model="scopes.writeLearnings" class="sr-only">
                             <div>
                                 <span class="text-sm font-medium" :class="scopes.writeLearnings || admin ? 'text-dark-100' : 'text-dark-200'">Write Learnings</span>
                                 <span class="block text-xs text-dark-500 mt-0.5">Store new facts</span>
@@ -226,8 +222,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                 </svg>
                             </div>
-                            <input type="checkbox" name="scopes" value="learn:write" x-model="scopes.writeLearnings" class="sr-only">
-                        </button>
+                        </label>
                     </div>
                 </div>
 
