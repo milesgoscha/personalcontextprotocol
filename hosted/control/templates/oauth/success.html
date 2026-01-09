@@ -14,8 +14,8 @@
     <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md">
         <div class="bg-dark-900 py-8 px-6 border border-dark-800 rounded-lg text-center">
             <!-- Success icon -->
-            <div class="mx-auto w-14 h-14 rounded-full bg-primary-500/10 flex items-center justify-center mb-5">
-                <svg class="w-7 h-7 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="mx-auto w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-5">
+                <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                 </svg>
             </div>
@@ -24,24 +24,40 @@
                 Authorization Successful
             </h1>
 
-            <p class="text-sm text-dark-400 mb-6">
+            <p class="text-sm text-dark-400 mb-4">
                 You have granted <span class="text-dark-200 font-medium">{{ client_name }}</span> access to your PCP data.
             </p>
 
+            <!-- Redirect status -->
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <svg class="animate-spin h-4 w-4 text-primary-500" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm text-dark-300">Redirecting to {{ app_name }}...</span>
+            </div>
+
             <div class="rounded-md border border-dark-700 bg-dark-850 p-4 mb-6">
                 <p class="text-xs text-dark-400">
-                    You can close this window and return to the application.
+                    You can close this tab after returning to the app.
                 </p>
             </div>
 
             <a href="/dashboard"
-               class="inline-flex items-center gap-2 text-sm text-primary-500 hover:text-primary-400 transition-colors">
+               class="inline-flex items-center gap-2 text-sm text-dark-500 hover:text-dark-400 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
-                Go to Dashboard
+                Or go to Dashboard
             </a>
         </div>
     </div>
 </div>
+
+<!-- Auto-redirect after brief delay -->
+<script>
+    setTimeout(function() {
+        window.location.href = "{{ redirect_url }}";
+    }, 1500);
+</script>
 {% endblock %}

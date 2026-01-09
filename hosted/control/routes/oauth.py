@@ -364,6 +364,22 @@ async def authorize(
     )
 
 
+def _get_app_name_from_redirect(redirect_uri: str) -> str:
+    """Determine user-friendly app name from OAuth redirect URI."""
+    parsed = urlparse(redirect_uri)
+    host = parsed.netloc.lower()
+
+    if "claude.ai" in host:
+        return "Claude"
+    elif "localhost" in host or "127.0.0.1" in host:
+        return "Claude Code"
+    elif "anthropic.com" in host:
+        return "Claude"
+    else:
+        # Extract domain name as fallback
+        return host.split(".")[0].title() if host else "the app"
+
+
 def _oauth_error_redirect(
     redirect_uri: str,
     error: str,
@@ -433,6 +449,7 @@ def _render_error_page(
 
 @router.post("/oauth/authorize/consent")
 async def handle_consent(
+    request: Request,
     client_id: str = Form(...),
     redirect_uri: str = Form(...),
     scope: str = Form(...),
@@ -478,10 +495,26 @@ async def handle_consent(
     db.add(auth_code)
     await db.commit()
 
-    # Redirect with code
-    return RedirectResponse(
-        url=f"{redirect_uri}?code={code}&state={state}",
-        status_code=302,
+    # Determine app name from redirect_uri for user-friendly messaging
+    app_name = _get_app_name_from_redirect(redirect_uri)
+
+    # Get client name for display
+    result = await db.execute(
+        select(OAuthClient).where(OAuthClient.client_id == client_id)
+    )
+    client = result.scalar_one_or_none()
+    client_name = client.client_name if client else "the application"
+
+    # Show success interstitial, then redirect
+    redirect_url = f"{redirect_uri}?code={code}&state={state}"
+    return templates.TemplateResponse(
+        "oauth/success.html",
+        {
+            "request": request,
+            "client_name": client_name,
+            "app_name": app_name,
+            "redirect_url": redirect_url,
+        },
     )
 
 
