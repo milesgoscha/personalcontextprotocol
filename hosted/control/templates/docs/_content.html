@@ -256,17 +256,30 @@
     <!-- OpenAI Codex CLI -->
     <h3 id="codex" class="text-lg font-medium text-dark-200 mt-8 mb-3">OpenAI Codex CLI</h3>
     <p class="text-dark-400 text-sm mb-3">
-        Add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/.codex/config.toml</code>:
+        Codex requires a local stdio proxy. First install PCP:
     </p>
-    <div class="relative group" x-data="{ copied: false }">
-        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">[mcp_servers.pcp]
-url = "{{ base_url }}/mcp"
-http_headers = { "Authorization" = "Bearer &lt;token&gt;" }</pre>
-        <button @click="navigator.clipboard.writeText(`[mcp_servers.pcp]\nurl = &quot;{{ base_url }}/mcp&quot;\nhttp_headers = { &quot;Authorization&quot; = &quot;Bearer <token>&quot; }`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+    <div class="relative group mb-4" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">pip install git+https://github.com/milesgoscha/personalcontextprotocol.git</pre>
+        <button @click="navigator.clipboard.writeText(`pip install git+https://github.com/milesgoscha/personalcontextprotocol.git`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
             <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </button>
     </div>
+    <p class="text-dark-400 text-sm mb-3">
+        Then add to <code class="text-dark-300 bg-dark-800 px-1.5 py-0.5 rounded text-xs break-all">~/.codex/config.toml</code>:
+    </p>
+    <div class="relative group" x-data="{ copied: false }">
+        <pre class="bg-dark-900 border border-dark-800 rounded-lg p-4 pr-12 overflow-x-auto text-sm text-dark-200 font-mono">[mcp_servers.pcp]
+command = "pcp-mcp"
+env = { "PCP_NODE_URL" = "{{ base_url }}", "PCP_TOKEN" = "&lt;token&gt;" }</pre>
+        <button @click="navigator.clipboard.writeText(`[mcp_servers.pcp]\ncommand = &quot;pcp-mcp&quot;\nenv = { &quot;PCP_NODE_URL&quot; = &quot;{{ base_url }}&quot;, &quot;PCP_TOKEN&quot; = &quot;<token>&quot; }`); copied = true; setTimeout(() => copied = false, 2000)" class="absolute top-3 right-3 p-1.5 rounded bg-dark-800 hover:bg-dark-700 text-dark-400 hover:text-dark-200 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy">
+            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <svg x-show="copied" x-cloak class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+    </div>
+    <p class="text-dark-500 text-xs mt-2">
+        The <code class="text-dark-400 bg-dark-800 px-1 py-0.5 rounded">pcp-mcp</code> command runs locally and proxies to your remote node.
+    </p>
 
     <!-- Other tools -->
     <h3 id="other-tools" class="text-lg font-medium text-dark-200 mt-8 mb-3">Other MCP clients</h3>
