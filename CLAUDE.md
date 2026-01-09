@@ -177,3 +177,45 @@ curl -X POST http://localhost:6001/api/observe \
   -H "Content-Type: application/json" \
   -d '{"objects": [{"envelope": {"type": "event"}, "payload": {"event_kind": "note", "summary": "Test event"}}]}'
 ```
+
+## Production Deployment
+
+### Server Access
+
+Production server: `167.71.110.175`
+
+SSH connection:
+```bash
+ssh -i ~/.ssh/claude_box root@167.71.110.175
+```
+
+The codebase is located at `/opt/pcp` on the server.
+
+### Deploying Changes
+
+1. **Push to GitHub:**
+   ```bash
+   git push origin main
+   ```
+
+2. **Pull on server and rebuild:**
+   ```bash
+   ssh -i ~/.ssh/claude_box root@167.71.110.175 "cd /opt/pcp && git pull origin main"
+   ssh -i ~/.ssh/claude_box root@167.71.110.175 "cd /opt/pcp/hosted/docker && docker compose -f docker-compose.hosted.yml up -d --build control-plane pcp-node"
+   ```
+
+3. **Check container status:**
+   ```bash
+   ssh -i ~/.ssh/claude_box root@167.71.110.175 "docker ps --format 'table {{.Names}}\t{{.Status}}'"
+   ```
+
+4. **View logs:**
+   ```bash
+   ssh -i ~/.ssh/claude_box root@167.71.110.175 "cd /opt/pcp/hosted/docker && docker compose -f docker-compose.hosted.yml logs -f control-plane"
+   ```
+
+### Production URLs
+
+- Dashboard: https://pcp.bio
+- User nodes: https://{username}.pcp.bio
+- MCP endpoint: https://{username}.pcp.bio/mcp
