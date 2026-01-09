@@ -154,26 +154,16 @@
 
     {% if node and node.status == 'running' %}
     <!-- Stats -->
-    <div class="grid grid-cols-1 {% if is_admin %}sm:grid-cols-3{% endif %} gap-4 mb-6">
+    <div class="grid grid-cols-1 {% if is_admin %}sm:grid-cols-2{% endif %} gap-4 mb-6">
         {% if is_admin %}
         <a href="/dashboard/grants" class="group border border-dark-800 rounded-lg p-4 hover:border-dark-700 transition-colors bg-dark-900">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-dark-500 uppercase tracking-wide">Active Grants</span>
+                <span class="text-xs font-medium text-dark-500 uppercase tracking-wide">Active Connections</span>
                 <svg class="w-4 h-4 text-dark-600 group-hover:text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </div>
             <p class="text-2xl font-semibold text-dark-100">{{ stats.active_grants or 0 }}</p>
-        </a>
-
-        <a href="/dashboard/grants?status=pending" class="group border border-dark-800 rounded-lg p-4 hover:border-dark-700 transition-colors bg-dark-900">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-medium text-dark-500 uppercase tracking-wide">Pending Review</span>
-                <svg class="w-4 h-4 text-dark-600 group-hover:text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </div>
-            <p class="text-2xl font-semibold text-dark-100">{{ stats.pending_grants or 0 }}</p>
         </a>
         {% endif %}
 
