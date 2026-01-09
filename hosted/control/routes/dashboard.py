@@ -99,15 +99,18 @@ async def require_auth(request: Request, db: AsyncSession) -> User:
 async def login_page(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
+    next: str | None = None,
 ):
     """Show login page."""
     user = await get_current_user_from_cookie(request, db)
     if user:
-        return RedirectResponse(url="/dashboard", status_code=303)
+        # If already logged in, redirect to next URL or dashboard
+        redirect_url = next if next else "/dashboard"
+        return RedirectResponse(url=redirect_url, status_code=303)
 
     return templates.TemplateResponse(
         "auth/login.html",
-        {"request": request},
+        {"request": request, "next": next or ""},
     )
 
 
@@ -117,6 +120,7 @@ async def login_submit(
     db: Annotated[AsyncSession, Depends(get_db)],
     email: str = Form(...),
     password: str = Form(...),
+    next: str = Form(""),
 ):
     """Handle login form submission."""
     # Find user
@@ -126,7 +130,7 @@ async def login_submit(
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(
             "auth/login.html",
-            {"request": request, "error": "Invalid email or password", "email": email},
+            {"request": request, "error": "Invalid email or password", "email": email, "next": next},
             status_code=401,
         )
 
@@ -145,15 +149,19 @@ async def login_submit(
     db.add(session)
     await db.commit()
 
-    # Check if user has completed onboarding
-    result = await db.execute(select(Node).where(Node.user_id == user.id))
-    node = result.scalar_one_or_none()
+    # If there's a next URL (e.g., from OAuth flow), use that
+    if next:
+        redirect_url = next
+    else:
+        # Check if user has completed onboarding
+        result = await db.execute(select(Node).where(Node.user_id == user.id))
+        node = result.scalar_one_or_none()
 
-    redirect_url = "/dashboard"
-    if node and node.status == NodeStatus.RUNNING:
         redirect_url = "/dashboard"
-    elif node:
-        redirect_url = "/onboarding/2"
+        if node and node.status == NodeStatus.RUNNING:
+            redirect_url = "/dashboard"
+        elif node:
+            redirect_url = "/onboarding/2"
 
     response = RedirectResponse(url=redirect_url, status_code=303)
     set_auth_cookies(response, access_token, refresh_token)

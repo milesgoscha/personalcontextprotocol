@@ -42,6 +42,9 @@
                   }"
                   @submit="submitting = true">
 
+                <!-- Preserve next URL for OAuth redirect after login -->
+                <input type="hidden" name="next" value="{{ next }}">
+
                 <div>
                     <label for="email" class="block text-sm font-medium text-dark-300 mb-1.5">Email address</label>
                     <input id="email"
