@@ -57,7 +57,7 @@
 <!-- Auto-redirect after brief delay -->
 <script>
     setTimeout(function() {
-        window.location.href = "{{ redirect_url }}";
+        window.location.href = "{{ redirect_url|safe }}";
     }, 1500);
 </script>
 {% endblock %}
