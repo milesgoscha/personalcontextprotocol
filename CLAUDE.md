@@ -137,7 +137,7 @@ Agents connect to PCP via MCP (Model Context Protocol):
 {
   "mcpServers": {
     "pcp": {
-      "url": "http://miles.pcp.localhost/mcp/mcp",
+      "url": "http://miles.pcp.localhost/mcp",
       "headers": {
         "Authorization": "Bearer <token>"
       }

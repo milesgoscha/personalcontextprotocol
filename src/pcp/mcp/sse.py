@@ -119,9 +119,11 @@ def create_mcp_sse_app(ops, get_ops_fn=None, get_token_store_fn=None) -> tuple[S
     # Use host="0.0.0.0" to disable auto-enabled DNS rebinding protection
     # (which only allows localhost/127.0.0.1). We're behind Traefik with our
     # own auth middleware, so we handle security at that layer.
+    # Use streamable_http_path="/" so endpoint is /mcp (not /mcp/mcp) when mounted
     mcp = FastMCP(
         "pcp",
         host="0.0.0.0",
+        streamable_http_path="/",
         instructions="""PCP (Personal Context Protocol) provides access to the user's personal context.
 
 Available tools:
