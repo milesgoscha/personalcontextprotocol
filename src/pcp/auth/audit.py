@@ -10,7 +10,9 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+from pcp import SPEC_REFERENCES
 from pcp.models.envelope import DisclosureLevel, ObjectType
+from pcp.auth.scopes import Operation, OPERATION_CAPABILITIES
 
 
 @dataclass
@@ -45,6 +47,12 @@ class AuditEvent:
 
     def to_pcp_event(self) -> dict[str, Any]:
         """Convert to PCP event format for storage."""
+        capability = None
+        try:
+            capability = OPERATION_CAPABILITIES.get(Operation(self.operation))
+        except (ValueError, KeyError):
+            capability = None
+
         return {
             "envelope": {
                 "id": self.id,
@@ -73,6 +81,11 @@ class AuditEvent:
                     "result_count": self.result_count,
                     "ip_address": self.ip_address,
                     "user_agent": self.user_agent,
+                    "capability": capability,
+                    "spec_reference": {
+                        "capabilities": SPEC_REFERENCES["capabilities"] if capability else None,
+                        "audit": SPEC_REFERENCES["audit"],
+                    },
                 },
             },
         }
@@ -105,6 +118,10 @@ class AuditLog:
             self.persist_path = str(user_dir / "audit.jsonl")
         else:
             self.persist_path = persist_path
+
+        # Load existing events from disk
+        if self.persist_path:
+            self._load_from_disk()
 
     def log(
         self,
@@ -151,6 +168,53 @@ class AuditLog:
 
         with open(self.persist_path, "a") as f:
             f.write(json.dumps(event.to_pcp_event()) + "\n")
+
+    def _load_from_disk(self) -> None:
+        """Load existing events from persistent store."""
+        import json
+        from pathlib import Path
+        from datetime import datetime
+
+        path = Path(self.persist_path)
+        if not path.exists():
+            return
+
+        try:
+            with open(path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        # Parse PCP event format back to AuditEvent
+                        payload = data.get("payload", {})
+                        detail = payload.get("detail", {})
+                        envelope = data.get("envelope", {})
+
+                        event = AuditEvent(
+                            id=envelope.get("id", ""),
+                            timestamp=datetime.fromisoformat(payload.get("timestamp", "")),
+                            event_kind=payload.get("event_kind", "pcp.audit.operation"),
+                            requester=detail.get("requester", ""),
+                            token_id=detail.get("token_id"),
+                            operation=detail.get("operation", ""),
+                            object_types=detail.get("object_types", []),
+                            disclosure_level=detail.get("disclosure_level", "summary"),
+                            request_filter=detail.get("request_filter"),
+                            success=detail.get("success", True),
+                            error=detail.get("error"),
+                            result_count=detail.get("result_count"),
+                            ip_address=detail.get("ip_address"),
+                            user_agent=detail.get("user_agent"),
+                        )
+                        self.events.append(event)
+                    except (json.JSONDecodeError, KeyError, ValueError):
+                        # Skip malformed entries
+                        continue
+        except IOError:
+            # File read error, start with empty list
+            pass
 
     def query(
         self,

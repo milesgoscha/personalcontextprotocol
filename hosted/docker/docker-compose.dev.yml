@@ -48,6 +48,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Shared PCP Node (multi-tenant mode)
+  pcp-node:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: pcp-node
+    restart: unless-stopped
+    environment:
+      PCP_NODE_ID: "pcp://hosted"
+      PCP_DATA_DIR: "/data"
+      PCP_ALLOW_INITIAL_TOKEN: "false"
+      PCP_MULTI_TENANT: "true"
+    volumes:
+      - pcp-node-data:/data
+    networks:
+      - pcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   # Database migrations (runs once, then exits)
   migrations:
     build:
@@ -101,15 +123,24 @@ services:
 
       # Admin users (comma-separated usernames)
       ADMIN_USERNAMES: ${ADMIN_USERNAMES:-}
+
+      # Multi-tenant mode - route to shared node
+      MULTI_TENANT: "true"
+      SHARED_NODE_URL: "http://pcp-node:6001"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - pcp-network
     labels:
       - "traefik.enable=true"
+      # Main domain route
       - "traefik.http.routers.control-plane.rule=Host(`${PCP_DOMAIN:-pcp.localhost}`)"
       - "traefik.http.routers.control-plane.entrypoints=web"
       - "traefik.http.services.control-plane.loadbalancer.server.port=8000"
+      # Wildcard subdomain route (for OAuth and MCP proxying)
+      - "traefik.http.routers.control-plane-subdomains.rule=HostRegexp(`^.+\\.${PCP_DOMAIN:-pcp.localhost}$$`)"
+      - "traefik.http.routers.control-plane-subdomains.entrypoints=web"
+      - "traefik.http.routers.control-plane-subdomains.service=control-plane"
 
 networks:
   pcp-network:
@@ -118,3 +149,4 @@ networks:
 
 volumes:
   postgres-data:
+  pcp-node-data:

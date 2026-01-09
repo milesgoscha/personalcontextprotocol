@@ -215,6 +215,79 @@ class NodeClient:
         except httpx.RequestError as e:
             raise NodeUnreachableError(f"Cannot reach node: {e}")
 
+    async def request_grant(
+        self,
+        client_id: str,
+        client_name: str,
+        scopes_requested: list[str],
+        reason: str,
+        trust_tier: str = "third_party",
+    ) -> dict[str, Any]:
+        """Request a new grant from the node.
+
+        Args:
+            client_id: Identifier for the requesting client.
+            client_name: Human-readable name for the client.
+            scopes_requested: List of scopes being requested.
+            reason: Why the grant is being requested.
+            trust_tier: Trust tier for the grant (default: third_party).
+
+        Returns:
+            Dict with grant_id, claim_secret, status, etc.
+        """
+        try:
+            # Endpoint is /api/grants/request (not /api/grants)
+            response = await self.client.post(
+                "/api/grants/request",
+                json={
+                    "client_id": client_id,
+                    "client_name": client_name,
+                    "scopes_requested": scopes_requested,
+                    "reason": reason,
+                    "trust_tier": trust_tier,
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise NodeAuthError("Admin token invalid or expired")
+            raise NodeClientError(f"Failed to request grant: {e}")
+        except httpx.RequestError as e:
+            raise NodeUnreachableError(f"Cannot reach node: {e}")
+
+    async def claim_grant_token(
+        self,
+        grant_id: str,
+        claim_secret: str,
+    ) -> dict[str, Any]:
+        """Claim a token from an approved grant.
+
+        Args:
+            grant_id: The grant ID to claim.
+            claim_secret: The secret provided when the grant was created.
+
+        Returns:
+            Dict with token, token_id, grant_id, scopes, expires_at, trust_tier.
+        """
+        try:
+            response = await self.client.post(
+                f"/api/grants/{grant_id}/token",
+                json={"claim_secret": claim_secret},
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise NodeAuthError("Admin token invalid or expired")
+            if e.response.status_code == 404:
+                raise NodeClientError(f"Grant {grant_id} not found")
+            if e.response.status_code == 400:
+                raise NodeClientError(f"Grant not approved, expired, or invalid claim secret")
+            raise NodeClientError(f"Failed to claim grant token: {e}")
+        except httpx.RequestError as e:
+            raise NodeUnreachableError(f"Cannot reach node: {e}")
+
     async def create_token(
         self,
         subject: str,

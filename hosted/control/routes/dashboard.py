@@ -328,23 +328,19 @@ async def dashboard_home(
             asyncio.create_task(_provision_node_legacy_task(node.id, user.id, user.username))
 
     # Get stats if node is running
+    settings = get_settings()
     stats = {"active_grants": 0, "pending_grants": 0}
-    if node and node.status == NodeStatus.RUNNING and node.admin_token_encrypted:
+    if node and node.status == NodeStatus.RUNNING:
         try:
-            admin_token = decrypt_token(
-                node.admin_token_encrypted,
-                user.id,
-                node.admin_token_version,
-            )
-            internal_url = f"http://pcp-{user.username}:6001"
-            async with NodeClient(internal_url, admin_token) as client:
+            # Use shared node with X-User-Id header for multi-tenant mode
+            node_url = settings.shared_node_url
+            extra_headers = {"X-User-Id": str(user.id)}
+            async with NodeClient(node_url, None, extra_headers) as client:
                 grants = await client.get_grants()
                 stats["active_grants"] = len([g for g in grants if g.get("status") == "approved"])
                 stats["pending_grants"] = len([g for g in grants if g.get("status") == "pending"])
-        except (DecryptionError, NodeClientError):
+        except NodeClientError:
             pass
-
-    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/home.html",
         {
@@ -364,35 +360,30 @@ async def dashboard_grants(
     db: Annotated[AsyncSession, Depends(get_db)],
     status_filter: str | None = None,
 ):
-    """Show grants management page (admin only)."""
+    """Show grants management page."""
     user = await get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
-    # Only admins can access grants page
     settings = get_settings()
-    if not settings.is_admin(user.username):
-        return RedirectResponse(url="/dashboard", status_code=303)
-
     result = await db.execute(select(Node).where(Node.user_id == user.id))
     node = result.scalar_one_or_none()
 
     grants = []
-    if node and node.status == NodeStatus.RUNNING and node.admin_token_encrypted:
+    if node and node.status == NodeStatus.RUNNING:
         try:
-            admin_token = decrypt_token(
-                node.admin_token_encrypted,
-                user.id,
-                node.admin_token_version,
-            )
-            internal_url = f"http://pcp-{user.username}:6001"
-            async with NodeClient(internal_url, admin_token) as client:
+            # Use shared node with X-User-Id header for multi-tenant mode
+            node_url = settings.shared_node_url
+            extra_headers = {"X-User-Id": str(user.id)}
+            async with NodeClient(node_url, None, extra_headers) as client:
                 all_grants = await client.get_grants()
+                # Filter out revoked grants (no longer actionable)
+                active_grants = [g for g in all_grants if g.get("status") != "revoked"]
                 if status_filter:
-                    grants = [g for g in all_grants if g.get("status") == status_filter]
+                    grants = [g for g in active_grants if g.get("status") == status_filter]
                 else:
-                    grants = all_grants
-        except (DecryptionError, NodeClientError):
+                    grants = active_grants
+        except NodeClientError:
             pass
 
     return templates.TemplateResponse(
@@ -403,7 +394,7 @@ async def dashboard_grants(
             "grants": grants,
             "status_filter": status_filter,
             "active_page": "grants",
-            "is_admin": True,  # Only admins reach here
+            "is_admin": settings.is_admin(user.username),
         },
     )
 
@@ -445,21 +436,20 @@ async def dashboard_audit(
     result = await db.execute(select(Node).where(Node.user_id == user.id))
     node = result.scalar_one_or_none()
 
+    settings = get_settings()
     entries = []
-    if node and node.status == NodeStatus.RUNNING and node.admin_token_encrypted:
+    if node and node.status == NodeStatus.RUNNING:
         try:
-            admin_token = decrypt_token(
-                node.admin_token_encrypted,
-                user.id,
-                node.admin_token_version,
-            )
-            internal_url = f"http://pcp-{user.username}:6001"
-            async with NodeClient(internal_url, admin_token) as client:
-                entries = await client.get_audit_log(limit=limit, offset=offset)
-        except (DecryptionError, NodeClientError):
+            # Use shared node with X-User-Id header for multi-tenant mode
+            node_url = settings.shared_node_url
+            extra_headers = {"X-User-Id": str(user.id)}
+            async with NodeClient(node_url, None, extra_headers) as client:
+                response = await client.get_audit_log(limit=limit, offset=offset)
+                # API returns {"events": [...], ...} - extract the events list
+                entries = response.get("events", []) if isinstance(response, dict) else response
+        except NodeClientError:
             pass
 
-    settings = get_settings()
     return templates.TemplateResponse(
         "dashboard/audit.html",
         {

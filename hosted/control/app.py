@@ -53,6 +53,7 @@ STRICT_RATE_LIMIT_PATHS = {
     "/api/v1/auth/signup": 5,    # 5 signups per minute per IP
     "/api/v1/auth/login": 10,    # 10 login attempts per minute per IP
     "/api/v1/auth/refresh": 20,  # 20 refreshes per minute
+    "/oauth/register": 10,       # 10 OAuth client registrations per minute per IP
 }
 
 
@@ -75,6 +76,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         limit = STRICT_RATE_LIMIT_PATHS.get(path)
 
         if not _rate_limiter.is_allowed(key, limit):
+            # OAuth endpoints expect {"error": "..."} format per RFC 6749
+            if path.startswith("/oauth/"):
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "error": "temporarily_unavailable",
+                        "error_description": "Rate limit exceeded. Try again later.",
+                    },
+                )
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Try again later."},
@@ -129,6 +139,7 @@ def create_app() -> FastAPI:
         dashboard_router,
         SubdomainProxyMiddleware,
     )
+    from .routes.oauth import router as oauth_router
 
     # Add subdomain proxy middleware FIRST (so it intercepts subdomain requests before routes)
     # This handles requests to {username}.pcp.bio/* and proxies to the shared node
@@ -137,6 +148,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(nodes_router, prefix="/api/v1/node", tags=["nodes"])
     app.include_router(proxy_router, prefix="/api/v1/node", tags=["proxy"])
+
+    # Register OAuth routes (no prefix - paths defined in router)
+    app.include_router(oauth_router, tags=["oauth"])
 
     # Register dashboard routes (HTML pages)
     app.include_router(dashboard_router, tags=["dashboard"])

@@ -93,6 +93,38 @@ class SubdomainProxyMiddleware(BaseHTTPMiddleware):
             # Not a subdomain - pass through to normal routes
             return await call_next(request)
 
+        # Handle OAuth discovery BEFORE checking node status
+        # This allows OAuth discovery even for subdomains without active nodes
+        # MCP clients need discovery to know WHERE to authenticate
+        if request.url.path == "/.well-known/oauth-protected-resource":
+            # Use the same scheme as the incoming request
+            scheme = request.url.scheme or "https"
+            return JSONResponse(
+                content={
+                    "resource": f"{scheme}://{host}",
+                    "authorization_servers": [f"{scheme}://{settings.pcp_domain}"],
+                    "bearer_methods_supported": ["header"],
+                }
+            )
+
+        # Also serve authorization server metadata on subdomains
+        # Some clients fetch this from the resource URL instead of the auth server
+        if request.url.path == "/.well-known/oauth-authorization-server":
+            scheme = request.url.scheme or "https"
+            base_url = f"{scheme}://{settings.pcp_domain}"
+            return JSONResponse(
+                content={
+                    "issuer": base_url,
+                    "authorization_endpoint": f"{base_url}/oauth/authorize",
+                    "token_endpoint": f"{base_url}/oauth/token",
+                    "registration_endpoint": f"{base_url}/oauth/register",
+                    "response_types_supported": ["code"],
+                    "grant_types_supported": ["authorization_code", "refresh_token"],
+                    "code_challenge_methods_supported": ["S256"],
+                    "token_endpoint_auth_methods_supported": ["none"],
+                }
+            )
+
         # This is a subdomain request - handle the proxy
         user_id = await _get_user_id_from_subdomain(host)
         if not user_id:

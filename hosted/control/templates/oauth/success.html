@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Authorization Successful - PCP{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark-950">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+            <img src="/static/img/pcp-logo.svg" alt="PCP" class="w-12 h-12">
+        </div>
+    </div>
+
+    <div class="mt-2 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-dark-900 py-8 px-6 border border-dark-800 rounded-lg text-center">
+            <!-- Success icon -->
+            <div class="mx-auto w-14 h-14 rounded-full bg-primary-500/10 flex items-center justify-center mb-5">
+                <svg class="w-7 h-7 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+
+            <h1 class="text-xl font-semibold text-dark-100 mb-2">
+                Authorization Successful
+            </h1>
+
+            <p class="text-sm text-dark-400 mb-6">
+                You have granted <span class="text-dark-200 font-medium">{{ client_name }}</span> access to your PCP data.
+            </p>
+
+            <div class="rounded-md border border-dark-700 bg-dark-850 p-4 mb-6">
+                <p class="text-xs text-dark-400">
+                    You can close this window and return to the application.
+                </p>
+            </div>
+
+            <a href="/dashboard"
+               class="inline-flex items-center gap-2 text-sm text-primary-500 hover:text-primary-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Go to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

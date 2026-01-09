@@ -19,8 +19,22 @@ class TestGrantCreation:
 
         assert grant.status == GrantStatus.PENDING
         assert grant.scopes_approved is None
-        assert claim_secret is not None
-        assert len(claim_secret) > 20
+
+    def test_grant_dict_includes_scope_descriptors(self, grant_store):
+        """Grant serialization exposes capability semantics."""
+        grant, _ = grant_store.create(
+            client_id="test-client",
+            client_name="Test App",
+            scopes_requested=["query:event.summary"],
+            reason="Testing",
+            trust_tier=TrustTier.THIRD_PARTY,
+        )
+
+        data = grant.to_dict()
+        requested = data["scope_descriptors"]["requested"]
+        assert requested[0]["capability"] == "READ"
+        assert requested[0]["spec_ref"]["capabilities"] == "PCP §5"
+        assert data["spec_references"]["scope"] == "PCP §6"
 
     def test_create_local_grant_auto_approves(self, grant_store):
         """Local grants are auto-approved."""

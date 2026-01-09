@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import Config
+from pcp import SPEC_VERSION, CONFORMANCE_LEVEL, SPEC_REFERENCES
 
 # Context variable for current user ID (set by middleware in multi-tenant mode)
 current_user_id: ContextVar[str | None] = ContextVar("current_user_id", default=None)
@@ -72,6 +73,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Check for stricter limits on certain paths
         path = request.url.path
         limit = STRICT_RATE_LIMIT_PATHS.get(path)
+
+        # Control plane requests (multi-tenant mode) get higher limits
+        # These come from the control plane with X-User-Id header for OAuth flows
+        if request.headers.get("X-User-Id"):
+            limit = None  # Use default limit (60/min) for control plane requests
 
         if not _rate_limiter.is_allowed(key, limit):
             return StreamingResponse(
@@ -165,7 +171,7 @@ def get_current_user_id() -> str | None:
 
 from pcp.auth.audit import AuditLog
 from pcp.auth.grants import Grant, GrantStatus, GrantStore, TrustTier
-from pcp.auth.scopes import Operation, validate_scope
+from pcp.auth.scopes import Operation, validate_scope, describe_scope
 from pcp.auth.tokens import Token, TokenStore, init_token_store
 from pcp.models.envelope import ObjectType
 
@@ -409,6 +415,10 @@ def create_app(
         return {
             "node_id": _node_id,
             "version": "0.1.0",
+            "spec": {
+                "version": SPEC_VERSION,
+                "conformance": CONFORMANCE_LEVEL,
+            },
             "endpoint": f"{_public_url}/api",
             "auth": {
                 "type": "bearer",
@@ -442,36 +452,8 @@ def create_app(
             return f"https://{forwarded_host}"
         return _public_url
 
-    # OAuth discovery endpoints - return 404 for all OAuth endpoints so clients
-    # fall back to Bearer token authentication instead of trying OAuth flow.
-    # See: https://github.com/anthropics/claude-code/issues/2831
-
-    @app.get("/.well-known/oauth-protected-resource")
-    @app.get("/.well-known/oauth-protected-resource/{path:path}")
-    @app.get("/.well-known/oauth-authorization-server")
-    @app.get("/.well-known/oauth-authorization-server/{path:path}")
-    @app.get("/.well-known/openid-configuration")
-    @app.get("/.well-known/openid-configuration/{path:path}")
-    async def oauth_discovery_not_supported(request: Request, path: str = ""):
-        """Return 404 for all OAuth discovery endpoints with proper JSON error."""
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": "not_found",
-                "error_description": "OAuth is not supported. Use Bearer token authentication.",
-            },
-        )
-
-    @app.post("/register")
-    async def oauth_register_not_supported():
-        """OAuth dynamic client registration - not supported, return proper error."""
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "invalid_request",
-                "error_description": "OAuth dynamic client registration is not supported. Use Bearer token authentication.",
-            },
-        )
+    # Note: OAuth discovery endpoints are handled by the control plane proxy
+    # (hosted/control/routes/subdomain_proxy.py), not here.
 
     @app.get("/api/describe")
     async def describe(token: Token | None = Depends(get_token)):
@@ -601,6 +583,11 @@ def create_app(
             "token_id": token_obj.token_id,
             "subject": token_obj.subject,
             "expires_at": token_obj.expires_at.isoformat(),
+            "scope_descriptors": [describe_scope(scope) for scope in request.scopes],
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.get("/api/tokens")
@@ -609,19 +596,26 @@ def create_app(
         require_admin(token)
         ts = get_token_store()
         tokens = ts.list_tokens()
+
+        def serialize_token(t: Token) -> dict[str, Any]:
+            scope_strings = [str(s) for s in t.scopes]
+            return {
+                "token_id": t.token_id,
+                "subject": t.subject,
+                "scopes": scope_strings,
+                "issued_at": t.issued_at.isoformat(),
+                "expires_at": t.expires_at.isoformat(),
+                "trust_tier": t.trust_tier,
+                "scope_descriptors": [describe_scope(s) for s in scope_strings],
+            }
+
         return {
-            "tokens": [
-                {
-                    "token_id": t.token_id,
-                    "subject": t.subject,
-                    "scopes": [str(s) for s in t.scopes],
-                    "issued_at": t.issued_at.isoformat(),
-                    "expires_at": t.expires_at.isoformat(),
-                    "trust_tier": t.trust_tier,
-                }
-                for t in tokens
-            ],
+            "tokens": [serialize_token(t) for t in tokens],
             "count": len(tokens),
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.delete("/api/tokens/{token_id}")
@@ -632,7 +626,14 @@ def create_app(
         success = ts.revoke(token_id)
         if not success:
             raise HTTPException(status_code=404, detail="Token not found")
-        return {"status": "revoked", "token_id": token_id}
+        return {
+            "status": "revoked",
+            "token_id": token_id,
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
+        }
 
     # Grant management endpoints
 
@@ -679,6 +680,10 @@ def create_app(
             "claim_secret": claim_secret,  # Client must store this securely!
             "status": grant.status.value,
             "message": "Grant approved automatically" if grant.status == GrantStatus.APPROVED else "Grant pending approval",
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.get("/api/grants")
@@ -694,6 +699,10 @@ def create_app(
         return {
             "grants": [g.to_dict() for g in grants],
             "count": len(grants),
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.get("/api/grants/{grant_id}")
@@ -741,6 +750,10 @@ def create_app(
             "status": grant.status.value,
             "scopes_approved": grant.scopes_approved,
             "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.post("/api/grants/{grant_id}/deny")
@@ -759,6 +772,10 @@ def create_app(
             "grant_id": grant.grant_id,
             "status": grant.status.value,
             "denial_reason": grant.denial_reason,
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     @app.post("/api/grants/{grant_id}/revoke")
@@ -774,6 +791,10 @@ def create_app(
         return {
             "grant_id": grant.grant_id,
             "status": grant.status.value,
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     class TokenClaimRequest(BaseModel):
@@ -797,10 +818,15 @@ def create_app(
         token_string, grant = result
         return {
             "token": token_string,
+            "token_id": grant.token_id,  # For OAuth refresh token revocation
             "grant_id": grant.grant_id,
             "scopes": grant.scopes_approved,
             "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
             "trust_tier": grant.trust_tier.value,
+            "spec": {
+                "capabilities": SPEC_REFERENCES["capabilities"],
+                "scope": SPEC_REFERENCES["scope"],
+            },
         }
 
     # Audit endpoint
@@ -860,6 +886,7 @@ def create_app(
             "count": len(paginated),
             "total": total,
             "has_more": total > offset + limit,
+            "spec": {"audit": SPEC_REFERENCES["audit"]},
         }
 
     # Export endpoint
@@ -892,7 +919,11 @@ def create_app(
         return StreamingResponse(
             generate(),
             media_type="application/x-ndjson",
-            headers={"Content-Disposition": "attachment; filename=pcp-export.jsonl"}
+            headers={
+                "Content-Disposition": "attachment; filename=pcp-export.jsonl",
+                "X-PCP-Spec-Version": SPEC_VERSION,
+                "X-PCP-Conformance": CONFORMANCE_LEVEL,
+            },
         )
 
     # Import endpoint
@@ -962,6 +993,7 @@ def create_app(
             "skipped": skipped,
             "errors": errors[:10],  # Limit error details
             "total_errors": len(errors),
+            "spec": {"transport": SPEC_REFERENCES["transport"]},
         }
 
     # Health check

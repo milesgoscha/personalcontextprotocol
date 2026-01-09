@@ -14,7 +14,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from pcp import SPEC_REFERENCES
 from .tokens import TokenStore, create_token
+from .scopes import describe_scope
 
 
 def _hash_secret(secret: str) -> str:
@@ -106,6 +108,16 @@ class Grant:
             "denial_reason": self.denial_reason,
             "token_id": self.token_id,
             "metadata": self.metadata,
+        }
+        result["scope_descriptors"] = {
+            "requested": [describe_scope(s) for s in self.scopes_requested],
+            "approved": [describe_scope(s) for s in (self.scopes_approved or [])]
+            if self.scopes_approved
+            else None,
+        }
+        result["spec_references"] = {
+            "capabilities": SPEC_REFERENCES["capabilities"],
+            "scope": SPEC_REFERENCES["scope"],
         }
         # Only include secret hash for internal storage, never in API responses
         if include_secret_hash:

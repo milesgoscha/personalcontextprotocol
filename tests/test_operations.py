@@ -3,6 +3,8 @@
 import pytest
 from datetime import datetime, timedelta
 
+from pcp import SPEC_VERSION, CONFORMANCE_LEVEL
+from pcp.auth.audit import AuditLog
 from pcp.auth.tokens import Token
 from pcp.auth.scopes import ScopeSet
 from pcp.server.operations import PCPOperations
@@ -28,6 +30,8 @@ class TestDescribe:
 
         assert "node_id" in result
         assert result["node_id"] == "pcp://test"
+        assert result["spec"]["version"] == SPEC_VERSION
+        assert result["spec"]["conformance"] == CONFORMANCE_LEVEL
         assert "schema_versions" in result
         assert "auth" in result
 
@@ -263,3 +267,17 @@ class TestScopeValidation:
                 object_types=["event"],
                 disclosure="detail",
             )
+
+
+class TestAuditMetadata:
+    def test_audit_event_includes_spec_reference(self):
+        """Audit entries include capability + spec references."""
+        audit = AuditLog()
+        event = audit.log(
+            operation="query",
+            requester="agent:test",
+            token_id="tok",
+            object_types=None,
+        )
+        payload = event.to_pcp_event()["payload"]["detail"]
+        assert payload["spec_reference"]["audit"] == "PCP §9"

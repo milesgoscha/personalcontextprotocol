@@ -1,62 +1,37 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}Grants - PCP{% endblock %}
+{% block title %}Connections - PCP{% endblock %}
 
 {% block page_content %}
 <div class="px-8 lg:px-12 py-8 max-w-5xl">
     <!-- Page header -->
     <header class="mb-8 animate-fade-in">
-        <h1 class="text-2xl font-semibold text-dark-100">Grants</h1>
-        <p class="mt-1.5 text-dark-400">Manage access requests from third-party agents</p>
+        <h1 class="text-2xl font-semibold text-dark-100">Connections</h1>
+        <p class="mt-1.5 text-dark-400">Apps connected to your PCP</p>
     </header>
 
-    <!-- Filter tabs -->
-    <div class="flex items-center gap-1 mb-6 animate-slide-up">
-        <a href="/dashboard/grants"
-           class="px-4 py-2 text-sm font-medium rounded-md transition-colors
-                  {% if not status_filter %}bg-dark-800 text-dark-100 border border-dark-700{% else %}text-dark-400 hover:bg-dark-850 hover:text-dark-200{% endif %}">
-            All
-        </a>
-        <a href="/dashboard/grants?status=pending"
-           class="px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2
-                  {% if status_filter == 'pending' %}bg-dark-800 text-dark-100 border border-dark-700{% else %}text-dark-400 hover:bg-dark-850 hover:text-dark-200{% endif %}">
-            Pending
-        </a>
-        <a href="/dashboard/grants?status=approved"
-           class="px-4 py-2 text-sm font-medium rounded-md transition-colors
-                  {% if status_filter == 'approved' %}bg-dark-800 text-dark-100 border border-dark-700{% else %}text-dark-400 hover:bg-dark-850 hover:text-dark-200{% endif %}">
-            Approved
-        </a>
-        <a href="/dashboard/grants?status=denied"
-           class="px-4 py-2 text-sm font-medium rounded-md transition-colors
-                  {% if status_filter == 'denied' %}bg-dark-800 text-dark-100 border border-dark-700{% else %}text-dark-400 hover:bg-dark-850 hover:text-dark-200{% endif %}">
-            Denied
-        </a>
-    </div>
-
     <!-- Grants list -->
-    <div class="space-y-4">
-        {% if grants %}
-            {% for grant in grants %}
-            <div id="grant-{{ grant.id }}"
-                 class="bg-dark-900 rounded-lg border border-dark-800 overflow-hidden animate-slide-up"
-                 style="animation-delay: {{ loop.index0 * 0.05 }}s">
+    <div id="grants-list" class="space-y-4">
+        {% for grant in grants %}
+        <div id="grant-{{ grant.grant_id }}"
+             class="grant-item bg-dark-900 rounded-lg border border-dark-800 overflow-hidden animate-slide-up"
+             style="animation-delay: {{ loop.index0 * 0.05 }}s">
                 <div class="p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex-1 min-w-0">
                             <!-- Client info -->
                             <div class="flex items-center gap-3 mb-3">
                                 <div class="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center flex-shrink-0">
-                                    <span class="text-sm font-semibold text-dark-300">{{ grant.requester[0]|upper }}</span>
+                                    <span class="text-sm font-semibold text-dark-300">{{ grant.client_name[0]|upper }}</span>
                                 </div>
                                 <div class="min-w-0">
-                                    <h3 class="text-base font-medium text-dark-100 truncate">{{ grant.requester }}</h3>
+                                    <h3 class="text-base font-medium text-dark-100 truncate">{{ grant.client_name }}</h3>
                                 </div>
                             </div>
 
                             <!-- Scopes -->
                             <div class="flex flex-wrap gap-2">
-                                {% for scope in grant.scopes %}
+                                {% for scope in grant.scopes_requested %}
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
                                     {% if 'admin' in scope %}bg-amber-900/30 text-amber-400 border border-amber-800/50
                                     {% elif scope.startswith('query:') %}bg-blue-900/30 text-blue-400 border border-blue-800/50
@@ -92,8 +67,8 @@
 
                             <!-- Metadata -->
                             <p class="text-xs text-dark-500 mt-4">
-                                Requested {{ grant.requested_at }}
-                                {% if grant.resolved_at %} &middot; Resolved {{ grant.resolved_at }}{% endif %}
+                                Requested {{ grant.created_at }}
+                                {% if grant.updated_at and grant.status != 'pending' %} &middot; Resolved {{ grant.updated_at }}{% endif %}
                             </p>
                         </div>
 
@@ -110,8 +85,8 @@
 
                             {% if grant.status == 'pending' %}
                             <div class="flex items-center gap-2">
-                                <button hx-post="/api/v1/node/grants/{{ grant.id }}/approve"
-                                        hx-target="#grant-{{ grant.id }}"
+                                <button hx-post="/api/v1/node/grants/{{ grant.grant_id }}/approve"
+                                        hx-target="#grant-{{ grant.grant_id }}"
                                         hx-swap="outerHTML"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,8 +94,8 @@
                                     </svg>
                                     Approve
                                 </button>
-                                <button hx-post="/api/v1/node/grants/{{ grant.id }}/deny"
-                                        hx-target="#grant-{{ grant.id }}"
+                                <button hx-post="/api/v1/node/grants/{{ grant.grant_id }}/deny"
+                                        hx-target="#grant-{{ grant.grant_id }}"
                                         hx-swap="outerHTML"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-dark-200 bg-dark-800 border border-dark-700 hover:bg-dark-750 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,9 +105,9 @@
                                 </button>
                             </div>
                             {% elif grant.status == 'approved' %}
-                            <button hx-post="/api/v1/node/grants/{{ grant.id }}/revoke"
-                                    hx-target="#grant-{{ grant.id }}"
-                                    hx-swap="outerHTML"
+                            <button hx-post="/api/v1/node/grants/{{ grant.grant_id }}/revoke"
+                                    hx-target="#grant-{{ grant.grant_id }}"
+                                    hx-swap="delete"
                                     hx-confirm="Are you sure you want to revoke this grant?"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-red-400 bg-red-900/20 border border-red-800/50 hover:bg-red-900/30 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,30 +115,41 @@
                                 </svg>
                                 Revoke
                             </button>
+                            {% elif grant.status == 'revoked' %}
+                            <span class="text-xs text-dark-500">Revoked</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-        {% else %}
-        <!-- Empty state -->
-        <div class="bg-dark-900 rounded-lg border border-dark-800 p-12 text-center animate-fade-in">
+        </div>
+        {% endfor %}
+
+        <!-- Empty state (hidden when there are grants) -->
+        <div id="grants-empty" class="bg-dark-900 rounded-lg border border-dark-800 p-12 text-center animate-fade-in {% if grants %}hidden{% endif %}">
             <div class="w-16 h-16 mx-auto rounded-xl bg-dark-800 flex items-center justify-center mb-4">
                 <svg class="w-8 h-8 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                 </svg>
             </div>
-            <h3 class="text-base font-medium text-dark-100 mb-1">No grants found</h3>
+            <h3 class="text-base font-medium text-dark-100 mb-1">No connected apps</h3>
             <p class="text-sm text-dark-400">
-                {% if status_filter %}
-                No {{ status_filter }} grants to display.
-                {% else %}
-                When third-party agents request access to your context, they'll appear here.
-                {% endif %}
+                When you authorize apps like Claude Code to access your PCP, they'll appear here.
             </p>
         </div>
-        {% endif %}
     </div>
 </div>
+
+<script>
+// Show empty state when last grant is deleted
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    const grantsList = document.getElementById('grants-list');
+    const emptyState = document.getElementById('grants-empty');
+    if (grantsList && emptyState) {
+        const remainingGrants = grantsList.querySelectorAll('.grant-item');
+        if (remainingGrants.length === 0) {
+            emptyState.classList.remove('hidden');
+        }
+    }
+});
+</script>
 {% endblock %}

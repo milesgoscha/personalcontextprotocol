@@ -186,3 +186,100 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# OAuth 2.1 Models
+
+
+class OAuthClient(Base):
+    """OAuth 2.1 client (dynamic registration)."""
+
+    __tablename__ = "oauth_clients"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    client_id: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )  # pcp_client_{random}
+    client_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    redirect_uris: Mapped[str] = mapped_column(
+        Text, nullable=False
+    )  # JSON array stored as text
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class OAuthAuthorizationCode(Base):
+    """OAuth 2.1 authorization code (short-lived, 10 min)."""
+
+    __tablename__ = "oauth_authorization_codes"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    code_hash: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )  # SHA256 of code
+    client_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("oauth_clients.client_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    username: Mapped[str] = mapped_column(String(63), nullable=False)
+    redirect_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    scope: Mapped[str] = mapped_column(Text, nullable=False)  # Space-separated scopes
+    code_challenge: Mapped[str] = mapped_column(
+        String(128), nullable=False
+    )  # PKCE S256
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class OAuthRefreshToken(Base):
+    """OAuth 2.1 refresh token (30 days)."""
+
+    __tablename__ = "oauth_refresh_tokens"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )  # SHA256 of token
+    client_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("oauth_clients.client_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    username: Mapped[str] = mapped_column(String(63), nullable=False)
+    scope: Mapped[str] = mapped_column(Text, nullable=False)  # Space-separated scopes
+    pcp_token_id: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # For revocation on refresh
+    pcp_grant_id: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # Track associated grant
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

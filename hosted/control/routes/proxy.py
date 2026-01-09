@@ -9,7 +9,7 @@ In legacy mode, routes to per-user Docker containers.
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -31,12 +31,20 @@ router = APIRouter()
 class GrantResponse(BaseModel):
     """Grant object from the node."""
 
-    id: str
-    requester: str
-    scopes: list[str]
+    grant_id: str
+    client_id: str
+    client_name: str
+    scopes_requested: list[str]
+    scopes_approved: list[str] | None = None
     status: str
-    requested_at: str
-    resolved_at: str | None = None
+    created_at: str
+    updated_at: str
+    trust_tier: str | None = None
+    reason: str | None = None
+    denial_reason: str | None = None
+
+    class Config:
+        extra = "allow"  # Allow additional fields from node
 
 
 class CreateTokenRequest(BaseModel):
@@ -240,12 +248,13 @@ async def deny_grant(
         )
 
 
-@router.post("/grants/{grant_id}/revoke", response_model=GrantResponse)
+@router.post("/grants/{grant_id}/revoke")
 async def revoke_grant(
     grant_id: str,
+    request: Request,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> GrantResponse:
+):
     """Revoke an active grant."""
     internal_url, admin_token, extra_headers = await _get_node_client_context(
         db, current_user.id, current_user.username
@@ -253,8 +262,11 @@ async def revoke_grant(
 
     try:
         async with NodeClient(internal_url, admin_token, extra_headers) as client:
-            grant = await client.revoke_grant(grant_id)
-            return GrantResponse(**grant)
+            await client.revoke_grant(grant_id)
+            # Return empty response for HTMX delete swap
+            if request.headers.get("HX-Request"):
+                return Response(status_code=200)
+            return {"status": "revoked", "grant_id": grant_id}
     except NodeAuthError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -298,7 +310,9 @@ async def list_tokens(
 
     try:
         async with NodeClient(internal_url, admin_token, extra_headers) as client:
-            tokens = await client.list_tokens()
+            all_tokens = await client.list_tokens()
+            # Filter out OAuth-issued tokens (shown in Connections page instead)
+            tokens = [t for t in all_tokens if not t.get('subject', '').startswith('oauth:')]
 
             if not tokens:
                 return HTMLResponse(content='''
@@ -455,14 +469,14 @@ async def create_token(
             # Return HTML snippet for HTMX to insert
             return HTMLResponse(
                 content=f'''
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 class="text-sm font-medium text-green-800 mb-2">Token Created Successfully</h4>
-                    <p class="text-xs text-green-600 mb-2">Copy this token now - it won't be shown again!</p>
+                <div class="bg-emerald-900/30 border border-emerald-800/50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-emerald-300 mb-2">Token Created Successfully</h4>
+                    <p class="text-xs text-emerald-400/70 mb-3">Copy this token now - it won't be shown again!</p>
                     <div class="flex items-center gap-2">
-                        <code class="flex-1 text-xs bg-white p-2 rounded border border-green-300 break-all select-all">{token}</code>
+                        <code class="flex-1 text-xs bg-dark-850 text-dark-100 p-2.5 rounded border border-dark-700 break-all select-all font-mono">{token}</code>
                         <button type="button"
                                 onclick="navigator.clipboard.writeText('{token}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)"
-                                class="px-3 py-1 text-xs font-medium text-green-700 bg-white border border-green-300 rounded hover:bg-green-50">
+                                class="px-3 py-2 text-xs font-medium text-emerald-300 bg-emerald-900/30 border border-emerald-800/50 rounded hover:bg-emerald-900/50 transition-colors">
                             Copy
                         </button>
                     </div>
@@ -471,12 +485,12 @@ async def create_token(
             )
     except NodeAuthError:
         return HTMLResponse(
-            content='<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Admin token expired or invalid. Please try logging out and back in.</div>',
+            content='<div class="bg-red-900/30 border border-red-800/50 rounded-lg p-4 text-red-300">Admin token expired or invalid. Please try logging out and back in.</div>',
             status_code=401,
         )
     except NodeClientError as e:
         return HTMLResponse(
-            content=f'<div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">Failed to create token: {e}</div>',
+            content=f'<div class="bg-red-900/30 border border-red-800/50 rounded-lg p-4 text-red-300">Failed to create token: {e}</div>',
             status_code=502,
         )
 

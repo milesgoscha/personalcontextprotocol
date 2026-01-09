@@ -37,6 +37,21 @@ class Operation(str, Enum):
     ADMIN = "admin"
 
 
+# Mapping operations to the capability taxonomy defined in docs/SPEC.md.
+# This is informative metadata so the reference node can report which parts
+# of the spec it satisfies.
+OPERATION_CAPABILITIES: dict[Operation, str] = {
+    Operation.QUERY: "READ",
+    Operation.OBSERVE: "APPEND",
+    Operation.LEARN: "MUTATE",
+    Operation.REFLECT: "DERIVE",
+    Operation.DESCRIBE: "SCOPE_QUERY",
+    Operation.SUBSCRIBE: "SCOPE_QUERY",
+    Operation.IDENTITY: "READ",
+    Operation.ADMIN: "MUTATE",
+}
+
+
 @dataclass
 class Scope:
     """A single scope permission."""
@@ -165,6 +180,28 @@ def parse_scope(scope_str: str) -> Scope:
         object_type=object_type,
         disclosure_level=disclosure_level,
     )
+
+
+def describe_scope(scope_str: str) -> dict[str, str | None]:
+    """
+    Return a capability-aware description of a scope string.
+
+    This is used in API responses to anchor scopes to the PCP spec's capability
+    and scope clauses, making it clear which semantics apply.
+    """
+    scope = parse_scope(scope_str)
+    capability = OPERATION_CAPABILITIES.get(scope.operation)
+    return {
+        "scope": scope_str,
+        "operation": scope.operation.value,
+        "capability": capability,
+        "object_type": scope.object_type.value if scope.object_type else "*",
+        "disclosure": scope.disclosure_level.value if scope.disclosure_level else "*",
+        "spec_ref": {
+            "capabilities": "PCP §5",
+            "scope": "PCP §6",
+        },
+    }
 
 
 class ScopeSet:

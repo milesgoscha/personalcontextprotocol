@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from pcp import CONFORMANCE_LEVEL, SPEC_VERSION
 from pcp.auth.audit import AuditLog, log_operation
 from pcp.auth.grants import TrustTier
 from pcp.auth.redactions import apply_redactions, get_effective_disclosure
@@ -72,6 +73,10 @@ class PCPOperations:
 
         return {
             "node_id": self.node_id,
+            "spec": {
+                "version": SPEC_VERSION,
+                "conformance": CONFORMANCE_LEVEL,
+            },
             "schema_versions": {
                 "pcp.identity": "1.0",
                 "pcp.event": "1.0",

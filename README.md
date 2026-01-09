@@ -2,7 +2,35 @@
 
 **"Personal context needs structure to be portable."**
 
-PCP is a protocol for representing and exchanging personal context (identity, events, learnings, reflections) with AI agents. It's designed as a profile on MCP, targeting RLM-style agents that treat context as external environment rather than prompt-stuffing.
+PCP is a transport-independent specification for representing and governing
+personal context (identity, events, learnings, reflections). The spec lives in
+`docs/SPEC.md` and defines the object model, provenance requirements,
+capabilities, scope semantics, and audit invariants. Any datastore or transport
+that satisfies that contract is PCP-compliant.
+
+This repository also ships a **reference node**: a FastAPI server plus CLI,
+collectors, and MCP bindings that implement the spec (PCP-Core + PCP-Extended).
+Think of MCP as one possible transport profile; disabling MCP does not change
+the semantics defined by the spec.
+
+## OAuth 2.1 (Optional Transport Profile)
+
+Hosted deployments now expose PCP via OAuth 2.1 so third-party MCP clients
+(e.g., Claude Code) can authenticate without manual Bearer tokens. Key details:
+
+- Discovery: `https://<pcp-domain>/.well-known/oauth-authorization-server` and
+  `https://<username>.<pcp-domain>/.well-known/oauth-protected-resource`.
+- Dynamic registration (`POST /oauth/register`) issues public clients that must
+  use PKCE (`S256`).
+- Scopes are mapped to PCP scopes via an allowlist (read-only by default; write
+  scopes require explicit consent). See Appendix A of `docs/SPEC.md`.
+- Authorization → Token flow auto-approves a matching PCP grant and returns a
+  scoped PCP token plus refresh token. Refreshes revoke the previous PCP token
+  before issuing a new one.
+
+If you operate your own control plane, follow the instructions in
+`hosted/control/routes/oauth.py` and `docs/SPEC.md` to expose the OAuth surface;
+standalone/self-hosted nodes can ignore this section.
 
 ## Project Structure
 

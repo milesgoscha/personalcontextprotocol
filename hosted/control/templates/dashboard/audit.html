@@ -1,12 +1,12 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}Audit Log - PCP{% endblock %}
+{% block title %}Activity - PCP{% endblock %}
 
 {% block page_content %}
 <div class="px-8 lg:px-12 py-8 max-w-6xl">
     <!-- Page header -->
     <header class="mb-8 animate-fade-in">
-        <h1 class="text-2xl font-semibold text-dark-100">Audit Log</h1>
+        <h1 class="text-2xl font-semibold text-dark-100">Activity</h1>
         <p class="mt-1.5 text-dark-400">View all activity on your PCP node</p>
     </header>
 
@@ -33,75 +33,58 @@
                 </thead>
                 <tbody class="divide-y divide-dark-800">
                     {% for entry in entries %}
+                    {% set detail = entry.payload.detail if entry.payload else {} %}
+                    {% set operation = detail.operation|default('unknown') %}
                     <tr class="hover:bg-dark-850/50 transition-colors">
                         <td class="px-5 py-4 whitespace-nowrap text-sm text-dark-400">
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <span class="font-mono text-xs">{{ entry.timestamp }}</span>
+                                <span class="font-mono text-xs">{{ entry.envelope.created_at[:19] if entry.envelope else '' }}</span>
                             </div>
                         </td>
                         <td class="px-5 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
-                                {% if 'error' in entry.action %}bg-red-900/30 text-red-400 border border-red-800/50
-                                {% elif 'create' in entry.action or 'approve' in entry.action or 'observe' in entry.action %}bg-emerald-900/30 text-emerald-400 border border-emerald-800/50
-                                {% elif 'delete' in entry.action or 'deny' in entry.action or 'revoke' in entry.action %}bg-amber-900/30 text-amber-400 border border-amber-800/50
-                                {% elif 'query' in entry.action %}bg-blue-900/30 text-blue-400 border border-blue-800/50
-                                {% elif 'learn' in entry.action %}bg-purple-900/30 text-purple-400 border border-purple-800/50
+                                {% if detail.error %}bg-red-900/30 text-red-400 border border-red-800/50
+                                {% elif operation == 'observe' %}bg-emerald-900/30 text-emerald-400 border border-emerald-800/50
+                                {% elif operation == 'query' %}bg-blue-900/30 text-blue-400 border border-blue-800/50
+                                {% elif operation == 'learn' %}bg-purple-900/30 text-purple-400 border border-purple-800/50
+                                {% elif operation == 'reflect' %}bg-amber-900/30 text-amber-400 border border-amber-800/50
                                 {% else %}bg-dark-800 text-dark-300 border border-dark-700{% endif %}">
-                                {% if 'query' in entry.action %}
+                                {% if operation == 'query' %}
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                                {% elif 'create' in entry.action or 'observe' in entry.action %}
+                                {% elif operation == 'observe' %}
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                {% elif 'approve' in entry.action %}
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                {% elif 'deny' in entry.action or 'delete' in entry.action or 'revoke' in entry.action %}
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                {% elif 'error' in entry.action %}
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                {% elif 'learn' in entry.action %}
+                                {% elif operation == 'learn' %}
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                {% elif operation == 'reflect' %}
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                {% elif detail.error %}
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                                 {% else %}
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 {% endif %}
-                                {{ entry.action }}
+                                {{ operation }}
                             </span>
                         </td>
                         <td class="px-5 py-4 whitespace-nowrap text-sm">
-                            {% if entry.subject %}
+                            {% if detail.requester %}
                             <span class="inline-flex items-center gap-1.5 text-dark-200">
                                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <span class="font-medium">{{ entry.subject }}</span>
+                                <span class="font-medium">{{ detail.requester }}</span>
                             </span>
                             {% else %}
                             <span class="text-dark-600">—</span>
                             {% endif %}
                         </td>
-                        <td class="px-5 py-4 text-sm text-dark-400 max-w-md" x-data="{ expanded: false }">
-                            {% if entry.details %}
-                            <div class="space-y-1">
-                                {% for key, value in (entry.details.items() if entry.details is mapping else []) %}
-                                <div class="flex items-start gap-2" x-show="expanded || {{ loop.index0 }} < 2">
-                                    <span class="text-dark-500 whitespace-nowrap">{{ key }}:</span>
-                                    <span class="text-dark-300 font-mono text-xs break-all bg-dark-850 px-1.5 py-0.5 rounded border border-dark-700">
-                                        {% if value is string %}{{ value }}{% elif value is number %}{{ value }}{% else %}{{ value|tojson }}{% endif %}
-                                    </span>
-                                </div>
-                                {% endfor %}
-                                {% if entry.details is mapping and entry.details|length > 2 %}
-                                <button @click="expanded = !expanded"
-                                        class="text-xs text-primary-500 hover:text-primary-400 font-medium mt-1 flex items-center gap-1">
-                                    <span x-show="!expanded">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                    </span>
-                                    <span x-show="expanded">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                                    </span>
-                                    <span x-text="expanded ? 'Show less' : '{{ entry.details|length - 2 }} more'"></span>
-                                </button>
-                                {% endif %}
-                            </div>
+                        <td class="px-5 py-4 text-sm text-dark-400 max-w-md">
+                            {% if detail.object_types %}
+                            <span class="text-dark-300 font-mono text-xs bg-dark-850 px-1.5 py-0.5 rounded border border-dark-700">
+                                {{ detail.object_types|join(', ') }}
+                            </span>
+                            {% elif detail.error %}
+                            <span class="text-red-400 text-xs">{{ detail.error }}</span>
                             {% else %}
                             <span class="text-dark-600">—</span>
                             {% endif %}

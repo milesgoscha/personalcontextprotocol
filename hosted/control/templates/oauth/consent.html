@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Authorize {{ client_name }} - PCP{% endblock %}
+
+{% block body %}
+<div class="min-h-full flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-dark-950">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+            <img src="/static/img/pcp-logo.svg" alt="PCP" class="w-12 h-12">
+        </div>
+
+        <h1 class="text-center text-xl font-semibold text-dark-100">
+            Authorization Request
+        </h1>
+        <p class="mt-2 text-center text-sm text-dark-400">
+            An application wants to access your PCP data
+        </p>
+    </div>
+
+    <div class="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-dark-900 py-6 px-5 border border-dark-800 rounded-lg">
+            <!-- Client info -->
+            <div class="flex items-center gap-3 mb-5 pb-5 border-b border-dark-800">
+                <div class="w-10 h-10 rounded-lg bg-dark-800 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-dark-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-dark-100">{{ client_name }}</p>
+                    <p class="text-xs text-dark-500">wants to access <span class="text-primary-500">{{ username }}.pcp</span></p>
+                </div>
+            </div>
+
+            <!-- Action form wraps access level selection and buttons -->
+            <form method="POST" action="/oauth/authorize/consent" x-data="{ accessLevel: 'full' }">
+                <input type="hidden" name="client_id" value="{{ client_id }}">
+                <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+                <input type="hidden" name="scope" value="{{ scope }}">
+                <input type="hidden" name="code_challenge" value="{{ code_challenge }}">
+                <input type="hidden" name="state" value="{{ state }}">
+                <input type="hidden" name="username" value="{{ username }}">
+
+                <!-- Access level selection -->
+                <div class="mb-5">
+                    <p class="text-xs font-medium text-dark-400 uppercase tracking-wide mb-3">Access Level</p>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                               :class="accessLevel === 'read' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-700 bg-dark-850 hover:border-dark-600'">
+                            <input type="radio" name="access_level" value="read" x-model="accessLevel"
+                                   class="mt-0.5 w-4 h-4 text-primary-500 border-dark-600 bg-dark-800 focus:ring-primary-500 focus:ring-offset-dark-900">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-dark-100">Read only</p>
+                                <p class="text-xs text-dark-400 mt-0.5">Query events, learnings, reflections, and identity</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                               :class="accessLevel === 'full' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-700 bg-dark-850 hover:border-dark-600'">
+                            <input type="radio" name="access_level" value="full" x-model="accessLevel" checked
+                                   class="mt-0.5 w-4 h-4 text-primary-500 border-dark-600 bg-dark-800 focus:ring-primary-500 focus:ring-offset-dark-900">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-dark-100">Full access</p>
+                                <p class="text-xs text-dark-400 mt-0.5">Read + write events, learnings, and reflections</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Security notice -->
+                <div class="mb-5 rounded-md border border-dark-700 bg-dark-850 p-3">
+                    <div class="flex gap-2">
+                        <svg class="h-4 w-4 text-dark-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-xs text-dark-400">
+                            You can change or revoke access at any time from your dashboard.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="space-y-3">
+                    <button type="submit" name="action" value="allow"
+                            class="flex w-full justify-center rounded-md bg-primary-500 hover:bg-primary-600 py-2.5 px-4 text-sm font-medium text-white transition-colors">
+                        Allow Access
+                    </button>
+
+                    <button type="submit" name="action" value="deny"
+                            class="flex w-full justify-center rounded-md border border-dark-700 bg-dark-850 hover:bg-dark-800 py-2.5 px-4 text-sm font-medium text-dark-300 transition-colors">
+                        Deny
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <p class="mt-4 text-center text-xs text-dark-500">
+            You can revoke access at any time from your
+            <a href="/dashboard/grants" class="text-primary-500 hover:text-primary-400">dashboard</a>.
+        </p>
+    </div>
+</div>
+{% endblock %}
