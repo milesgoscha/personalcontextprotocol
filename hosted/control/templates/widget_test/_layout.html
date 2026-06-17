@@ -1,0 +1,94 @@
+<!-- TEMPORARY: Onsite scheduler widget in-the-wild test. Mock host site
+     "Onsite Electric". Self-contained — intentionally does NOT extend base.html
+     so the site's own styling never interferes with the embedded widget.
+     Teardown: delete templates/widget_test/, the /widget-test routes in
+     routes/dashboard.py, and the nav link in dashboard_base.html. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Onsite Electric{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0c2a43; --navy-700: #123a5c; --amber: #f5a623; --amber-600: #e0930c;
+      --ink: #14202b; --muted: #5b6b78; --line: #e4e9ee; --bg: #f6f8fa; --white: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--ink); background: var(--bg); line-height: 1.6;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    /* Top bar */
+    .topbar { background: var(--navy); color: #cfe0ee; font-size: 13px; }
+    .topbar .wrap { display: flex; justify-content: space-between; align-items: center; height: 38px; }
+    .topbar .badge { color: var(--amber); font-weight: 600; }
+    /* Header */
+    header.site { background: var(--white); border-bottom: 1px solid var(--line); }
+    header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; color: var(--navy); text-decoration: none; }
+    .brand .bolt { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: var(--amber); color: var(--navy); font-size: 20px; }
+    nav.main { display: flex; gap: 26px; font-weight: 500; color: var(--muted); }
+    nav.main a { text-decoration: none; }
+    nav.main a:hover { color: var(--navy); }
+    .phone { font-weight: 700; color: var(--navy); text-decoration: none; }
+    /* Hero */
+    .hero { background: linear-gradient(160deg, var(--navy) 0%, var(--navy-700) 100%); color: var(--white); }
+    .hero .wrap { padding: 64px 24px; }
+    .hero h1 { font-size: 40px; line-height: 1.15; margin: 0 0 14px; font-weight: 800; max-width: 18ch; }
+    .hero p { font-size: 18px; color: #c9dbea; margin: 0 0 28px; max-width: 52ch; }
+    .pill { display: inline-block; background: var(--amber); color: var(--navy); font-weight: 700;
+            padding: 13px 24px; border-radius: 9999px; text-decoration: none; }
+    .pill:hover { background: var(--amber-600); }
+    /* Sections */
+    section.block { padding: 56px 0; }
+    h2 { font-size: 26px; font-weight: 700; color: var(--navy); margin: 0 0 8px; }
+    .lede { color: var(--muted); margin: 0 0 28px; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+    .card .ic { font-size: 24px; }
+    .card h3 { margin: 10px 0 6px; font-size: 17px; color: var(--navy); }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; }
+    /* Scheduler host panel */
+    .scheduler-panel { background: var(--white); border: 1px solid var(--line); border-radius: 16px;
+                       padding: 28px; box-shadow: 0 1px 3px rgba(12,42,67,.06); }
+    /* Footer */
+    footer.site { background: var(--navy); color: #aac2d6; margin-top: 40px; }
+    footer.site .wrap { display: flex; flex-wrap: wrap; gap: 40px; padding: 40px 24px; }
+    footer.site h4 { color: var(--white); font-size: 14px; margin: 0 0 10px; }
+    footer.site .col { font-size: 14px; }
+    footer.site .copy { border-top: 1px solid rgba(255,255,255,.1); font-size: 12px; color: #7f9bb3; }
+    footer.site .copy .wrap { padding: 16px 24px; }
+    .testbar { background: #fff8e6; border-bottom: 1px solid #f3e2b4; color: #6b5310; font-size: 12px; }
+    .testbar .wrap { padding: 7px 24px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+    @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } nav.main { display: none; } .hero h1 { font-size: 30px; } }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="testbar"><div class="wrap">Internal widget test — Onsite Electric is a mock site. <a href="/widget-test">All variants →</a></div></div>
+  <div class="topbar"><div class="wrap"><span class="badge">⚡ Licensed &amp; Insured · 24/7 Emergency Service</span><span>Serving the Greater Bay Area</span></div></div>
+  <header class="site"><div class="wrap">
+    <a class="brand" href="/widget-test"><span class="bolt">⚡</span> Onsite Electric</a>
+    <nav class="main"><a href="/widget-test/inline#services">Services</a><a href="/widget-test/inline">About</a><a href="/widget-test/inline">Reviews</a><a href="/widget-test/inline#schedule">Schedule</a></nav>
+    <a class="phone" href="tel:+15105550148">(510) 555-0148</a>
+  </div></header>
+
+  {% block body %}{% endblock %}
+
+  <footer class="site">
+    <div class="wrap">
+      <div class="col"><h4>Onsite Electric</h4>Trusted residential &amp; commercial electricians. Panel upgrades, EV chargers, lighting, diagnostics.</div>
+      <div class="col"><h4>Hours</h4>Mon–Sat 7am–7pm<br>24/7 emergency dispatch</div>
+      <div class="col"><h4>Service Area</h4>Oakland · Berkeley · Fremont<br>San Jose · Hayward</div>
+    </div>
+    <div class="copy"><div class="wrap">© 2026 Onsite Electric (mock). License #C10-998877.</div></div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

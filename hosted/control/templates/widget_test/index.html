@@ -1,0 +1,19 @@
+{% extends "widget_test/_layout.html" %}
+{% block title %}Onsite Electric — Widget Test{% endblock %}
+{% block body %}
+<div class="hero"><div class="wrap">
+  <h1>Onsite widget — in-the-wild test</h1>
+  <p>This is a mock electrician site hosting the Onsite scheduling widget three ways, to
+     simulate both the embedder's setup and a customer's experience. Pick a variant.</p>
+</div></div>
+<section class="block"><div class="wrap">
+  <div class="cards">
+    <a class="card" href="/widget-test/inline" style="text-decoration:none">
+      <div class="ic">📅</div><h3>Inline embed</h3><p>Widget rendered directly in the page (theme: adaptive).</p></a>
+    <a class="card" href="/widget-test/popup" style="text-decoration:none">
+      <div class="ic">🪟</div><h3>Popup / modal</h3><p>Widget-provided button opens a modal (brand themed).</p></a>
+    <a class="card" href="/widget-test/custom-button" style="text-decoration:none">
+      <div class="ic">🔘</div><h3>Bring your own button</h3><p>Our branded button triggers the modal.</p></a>
+  </div>
+</div></section>
+{% endblock %}
