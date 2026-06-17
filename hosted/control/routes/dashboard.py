@@ -648,8 +648,8 @@ async def docs_page(
 
 # --- TEMPORARY: Onsite scheduler widget test pages ---
 # Public, no-auth, no-DB. Mock host site "Onsite Electric" embedding the Onsite
-# scheduler widget. Teardown = delete this block, templates/widget_test/, and the
-# nav link in dashboard_base.html (Resources section).
+# scheduler widget. Teardown = delete this block, templates/widget_test/, the nav
+# link in dashboard_base.html (Resources section), and the link in docs/home.html.
 # Spec: docs/superpowers/specs/2026-06-17-onsite-widget-test-design.md
 
 
@@ -675,3 +675,9 @@ async def widget_test_popup(request: Request):
 async def widget_test_custom_button(request: Request):
     """Bring-your-own-button modal variant."""
     return templates.TemplateResponse("widget_test/custom_button.html", {"request": request})
+
+
+@router.get("/widget-test/playground", response_class=HTMLResponse)
+async def widget_test_playground(request: Request):
+    """Paste-your-own embed playground (runs client-side only)."""
+    return templates.TemplateResponse("widget_test/playground.html", {"request": request})

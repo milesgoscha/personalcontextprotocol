@@ -1,0 +1,90 @@
+{% extends "widget_test/_layout.html" %}
+{% block title %}Onsite Electric — Embed Playground{% endblock %}
+{% block head %}
+<style>
+  .pg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .pg-grid { grid-template-columns: 1fr; } }
+  .pg textarea {
+    width: 100%; min-height: 340px; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    font-size: 12.5px; line-height: 1.5; padding: 14px; border: 1px solid var(--line);
+    border-radius: 12px; resize: vertical; color: var(--ink); background: #fbfdff;
+  }
+  .pg-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+  .pg-btn { font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 9999px;
+            background: var(--amber); color: var(--navy); padding: 11px 22px; }
+  .pg-btn:hover { background: var(--amber-600); }
+  .pg-btn.ghost { background: var(--white); color: var(--navy); border: 1px solid var(--line); }
+  .pg-preview { min-height: 340px; }
+  .pg-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="hero"><div class="wrap">
+  <h1>Embed playground</h1>
+  <p>Paste any Onsite embed snippet and run it right here to try the flow yourself.
+     It runs entirely in your browser — nothing is uploaded, saved, or shared.</p>
+</div></div>
+
+<section class="block"><div class="wrap">
+  <div class="pg-grid pg">
+    <div>
+      <h2>Your embed code</h2>
+      <p class="lede">Paste the <code>&lt;div&gt;</code> + <code>&lt;script&gt;</code> snippet, then press Run.</p>
+      <textarea id="pg-input" spellcheck="false">{% raw %}<div class="onsite-scheduler" data-onsite-scheduler="wss_o2PPE2qV0Fl1oQlA"></div>
+<script>
+  (function (w, d, s, src, n) {
+    w[n] = w[n] || function () { (w[n].q = w[n].q || []).push(arguments); };
+    var js = d.createElement(s); js.src = src; js.async = true;
+    var first = d.getElementsByTagName(s)[0]; first.parentNode.insertBefore(js, first);
+  })(window, document, 'script', 'https://scheduler.staging.useonsite.com/webscheduler/shim.js', 'OnsiteScheduler');
+  OnsiteScheduler('init', 'wss_o2PPE2qV0Fl1oQlA', { theme: 'light' });
+</script>{% endraw %}</textarea>
+      <div class="pg-actions">
+        <button class="pg-btn" id="pg-run">Run ▶</button>
+        <button class="pg-btn ghost" id="pg-reset">Reset preview</button>
+      </div>
+      <p class="pg-note">Note: the widget ignores a second <code>init</code> for the same workspace id
+        on one page (mount guard). To re-run cleanly after a render, reload the page first.</p>
+    </div>
+    <div>
+      <h2>Live preview</h2>
+      <p class="lede">Your snippet renders in this panel.</p>
+      <div class="scheduler-panel pg-preview" id="pg-preview">
+        <p style="color:var(--muted);margin:0;">Press <strong>Run</strong> to render your snippet.</p>
+      </div>
+    </div>
+  </div>
+</div></section>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var preview = document.getElementById('pg-preview');
+    var input = document.getElementById('pg-input');
+    var placeholder = '<p style="color:#5b6b78;margin:0;">Press <strong>Run</strong> to render your snippet.</p>';
+
+    function run() {
+      preview.innerHTML = '';
+      var holder = document.createElement('div');
+      holder.innerHTML = input.value;
+      // Move nodes into the preview. <script> elements inserted via innerHTML do NOT
+      // execute, so recreate them so the embed actually runs.
+      Array.prototype.slice.call(holder.childNodes).forEach(function (node) {
+        if (node.tagName === 'SCRIPT') {
+          var s = document.createElement('script');
+          if (node.src) s.src = node.src;
+          s.textContent = node.textContent;
+          if (node.async) s.async = true;
+          preview.appendChild(s);
+        } else {
+          preview.appendChild(node);
+        }
+      });
+    }
+    function reset() { preview.innerHTML = placeholder; }
+
+    document.getElementById('pg-run').addEventListener('click', run);
+    document.getElementById('pg-reset').addEventListener('click', reset);
+  })();
+</script>
+{% endblock %}

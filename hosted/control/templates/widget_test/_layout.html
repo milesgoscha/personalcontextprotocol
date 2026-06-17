@@ -2,7 +2,8 @@
      "Onsite Electric". Self-contained — intentionally does NOT extend base.html
      so the site's own styling never interferes with the embedded widget.
      Teardown: delete templates/widget_test/, the /widget-test routes in
-     routes/dashboard.py, and the nav link in dashboard_base.html. -->
+     routes/dashboard.py, the nav link in dashboard_base.html, and the
+     "Widget test" link in docs/home.html. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,13 +66,28 @@
     footer.site .copy { border-top: 1px solid rgba(255,255,255,.1); font-size: 12px; color: #7f9bb3; }
     footer.site .copy .wrap { padding: 16px 24px; }
     .testbar { background: #fff8e6; border-bottom: 1px solid #f3e2b4; color: #6b5310; font-size: 12px; }
-    .testbar .wrap { padding: 7px 24px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+    .testbar .wrap { padding: 8px 24px; display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .tb-label { font-weight: 600; }
+    .vswitch { display: flex; gap: 6px; flex-wrap: wrap; }
+    .vswitch a { text-decoration: none; font-weight: 600; font-size: 12px; padding: 4px 12px; border-radius: 9999px; border: 1px solid #e6d39a; color: #6b5310; background: var(--white); }
+    .vswitch a:hover { background: #fbe9bf; }
+    .vswitch a.on { background: var(--navy); color: var(--white); border-color: var(--navy); }
     @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } nav.main { display: none; } .hero h1 { font-size: 30px; } }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body>
-  <div class="testbar"><div class="wrap">Internal widget test — Onsite Electric is a mock site. <a href="/widget-test">All variants →</a></div></div>
+  {% set _p = request.url.path %}
+  <div class="testbar"><div class="wrap">
+    <span class="tb-label">Widget test · Onsite Electric (mock)</span>
+    <nav class="vswitch">
+      <a href="/widget-test" class="{% if _p == '/widget-test' %}on{% endif %}">Overview</a>
+      <a href="/widget-test/inline" class="{% if _p == '/widget-test/inline' %}on{% endif %}">Inline</a>
+      <a href="/widget-test/popup" class="{% if _p == '/widget-test/popup' %}on{% endif %}">Popup</a>
+      <a href="/widget-test/custom-button" class="{% if _p == '/widget-test/custom-button' %}on{% endif %}">Custom button</a>
+      <a href="/widget-test/playground" class="{% if _p == '/widget-test/playground' %}on{% endif %}">Playground</a>
+    </nav>
+  </div></div>
   <div class="topbar"><div class="wrap"><span class="badge">⚡ Licensed &amp; Insured · 24/7 Emergency Service</span><span>Serving the Greater Bay Area</span></div></div>
   <header class="site"><div class="wrap">
     <a class="brand" href="/widget-test"><span class="bolt">⚡</span> Onsite Electric</a>
