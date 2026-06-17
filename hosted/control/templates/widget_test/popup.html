@@ -1,0 +1,27 @@
+{% extends "widget_test/_layout.html" %}
+{% block title %}Onsite Electric — Book Online{% endblock %}
+{% block body %}
+<div class="hero"><div class="wrap">
+  <h1>Need an electrician? Book in one click.</h1>
+  <p>Tap the button to open our scheduler. The popup is the Onsite widget in <strong>modal</strong> mode — exactly what a customer pastes.</p>
+</div></div>
+
+<section class="block"><div class="wrap">
+  <h2>Book your appointment</h2>
+  <p class="lede">The button below is rendered and themed by the Onsite widget itself (brand colors from the snippet).</p>
+  <div class="scheduler-panel">
+    <!-- BEGIN Onsite popup embed (verbatim customer snippet). With no custom trigger
+         present, the shim injects its own themed "Book now" button into this div. -->
+    <div class="onsite-scheduler" data-onsite-scheduler="wss_o2PPE2qV0Fl1oQlA"></div>
+    <script>
+      (function (w, d, s, src, n) {
+        w[n] = w[n] || function () { (w[n].q = w[n].q || []).push(arguments); };
+        var js = d.createElement(s); js.src = src; js.async = true;
+        var first = d.getElementsByTagName(s)[0]; first.parentNode.insertBefore(js, first);
+      })(window, document, 'script', 'https://scheduler.staging.useonsite.com/webscheduler/shim.js', 'OnsiteScheduler');
+      OnsiteScheduler('init', 'wss_o2PPE2qV0Fl1oQlA', { theme: 'light', mode: 'modal', brandColorLight: '#318C7D', brandColorDark: '#573D3D' });
+    </script>
+    <!-- END Onsite popup embed -->
+  </div>
+</div></section>
+{% endblock %}

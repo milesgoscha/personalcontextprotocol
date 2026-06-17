@@ -1,0 +1,37 @@
+{% extends "widget_test/_layout.html" %}
+{% block title %}Onsite Electric — Schedule a Visit{% endblock %}
+{% block body %}
+<div class="hero"><div class="wrap">
+  <h1>Licensed electricians, scheduled in seconds.</h1>
+  <p>Panel upgrades, EV charger installs, troubleshooting, and 24/7 emergency service. Book a visit below — no phone tag.</p>
+  <a class="pill" href="#schedule">Schedule a visit</a>
+</div></div>
+
+<section class="block" id="services"><div class="wrap">
+  <h2>What we do</h2>
+  <p class="lede">Fully licensed and insured, with upfront pricing.</p>
+  <div class="cards">
+    <div class="card"><div class="ic">🔌</div><h3>EV Charger Installation</h3><p>Level 2 home charging, permitted and inspected.</p></div>
+    <div class="card"><div class="ic">⚡</div><h3>Panel Upgrades</h3><p>100A → 200A service upgrades for modern loads.</p></div>
+    <div class="card"><div class="ic">💡</div><h3>Lighting &amp; Diagnostics</h3><p>Recessed lighting, rewires, and fault finding.</p></div>
+  </div>
+</div></section>
+
+<section class="block" id="schedule"><div class="wrap">
+  <h2>Schedule a visit</h2>
+  <p class="lede">Pick a time that works for you. We'll confirm by text.</p>
+  <div class="scheduler-panel">
+    <!-- BEGIN Onsite inline embed (verbatim customer snippet) -->
+    <div class="onsite-scheduler" data-onsite-scheduler="wss_o2PPE2qV0Fl1oQlA"></div>
+    <script>
+      (function (w, d, s, src, n) {
+        w[n] = w[n] || function () { (w[n].q = w[n].q || []).push(arguments); };
+        var js = d.createElement(s); js.src = src; js.async = true;
+        var first = d.getElementsByTagName(s)[0]; first.parentNode.insertBefore(js, first);
+      })(window, document, 'script', 'https://scheduler.staging.useonsite.com/webscheduler/shim.js', 'OnsiteScheduler');
+      OnsiteScheduler('init', 'wss_o2PPE2qV0Fl1oQlA', { theme: 'adaptive' });
+    </script>
+    <!-- END Onsite inline embed -->
+  </div>
+</div></section>
+{% endblock %}

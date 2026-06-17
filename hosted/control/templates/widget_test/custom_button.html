@@ -1,0 +1,43 @@
+{% extends "widget_test/_layout.html" %}
+{% block title %}Onsite Electric — Request Service{% endblock %}
+{% block head %}
+<style>
+  .oe-cta { font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 9999px;
+            background: var(--amber); color: var(--navy); padding: 14px 28px; font-size: 16px; }
+  .oe-cta:hover { background: var(--amber-600); }
+  .oe-cta.secondary { background: var(--navy); color: #fff; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="hero"><div class="wrap">
+  <h1>Your button, our scheduler.</h1>
+  <p>These are <strong>our own</strong> branded buttons wired to open the Onsite modal via the
+     <code>data-onsite-scheduler-trigger</code> attribute — no widget-injected button.</p>
+</div></div>
+
+<section class="block"><div class="wrap">
+  <h2>Request service</h2>
+  <p class="lede">Click either button — both open the same Onsite scheduler modal.</p>
+  <div class="scheduler-panel">
+    <!-- Our own buttons. The shim binds any element with data-onsite-scheduler-trigger. -->
+    <p style="display:flex; gap:14px; flex-wrap:wrap; margin:0;">
+      <button class="oe-cta" data-onsite-scheduler-trigger="wss_o2PPE2qV0Fl1oQlA">⚡ Book a job</button>
+      <button class="oe-cta secondary" data-onsite-scheduler-trigger="wss_o2PPE2qV0Fl1oQlA">Schedule an estimate</button>
+    </p>
+
+    <!-- Verbatim modal snippet kept for parity. With our triggers present, the shim
+         uses them and does NOT inject its own button. The mount div stays empty.
+         (Alternative API: pass { trigger: '.oe-cta' } in the init options instead
+         of the data attribute — either works.) -->
+    <div class="onsite-scheduler" data-onsite-scheduler="wss_o2PPE2qV0Fl1oQlA"></div>
+    <script>
+      (function (w, d, s, src, n) {
+        w[n] = w[n] || function () { (w[n].q = w[n].q || []).push(arguments); };
+        var js = d.createElement(s); js.src = src; js.async = true;
+        var first = d.getElementsByTagName(s)[0]; first.parentNode.insertBefore(js, first);
+      })(window, document, 'script', 'https://scheduler.staging.useonsite.com/webscheduler/shim.js', 'OnsiteScheduler');
+      OnsiteScheduler('init', 'wss_o2PPE2qV0Fl1oQlA', { theme: 'light', mode: 'modal', brandColorLight: '#318C7D', brandColorDark: '#573D3D' });
+    </script>
+  </div>
+</div></section>
+{% endblock %}
