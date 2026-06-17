@@ -649,7 +649,7 @@ async def docs_page(
 # --- TEMPORARY: Onsite scheduler widget test pages ---
 # Public, no-auth, no-DB. Mock host site "Onsite Electric" embedding the Onsite
 # scheduler widget. Teardown = delete this block, templates/widget_test/, and the
-# nav link in components/nav.html.
+# nav link in dashboard_base.html (Resources section).
 # Spec: docs/superpowers/specs/2026-06-17-onsite-widget-test-design.md
 
 
