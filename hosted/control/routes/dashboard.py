@@ -644,3 +644,34 @@ async def docs_page(
         "docs/home.html",
         {"request": request, "user": None, "node": None},
     )
+
+
+# --- TEMPORARY: Onsite scheduler widget test pages ---
+# Public, no-auth, no-DB. Mock host site "Onsite Electric" embedding the Onsite
+# scheduler widget. Teardown = delete this block, templates/widget_test/, and the
+# nav link in components/nav.html.
+# Spec: docs/superpowers/specs/2026-06-17-onsite-widget-test-design.md
+
+
+@router.get("/widget-test", response_class=HTMLResponse)
+async def widget_test_index(request: Request):
+    """Hub page linking the widget embed variants."""
+    return templates.TemplateResponse("widget_test/index.html", {"request": request})
+
+
+@router.get("/widget-test/inline", response_class=HTMLResponse)
+async def widget_test_inline(request: Request):
+    """Inline embed variant."""
+    return templates.TemplateResponse("widget_test/inline.html", {"request": request})
+
+
+@router.get("/widget-test/popup", response_class=HTMLResponse)
+async def widget_test_popup(request: Request):
+    """Popup/modal embed variant."""
+    return templates.TemplateResponse("widget_test/popup.html", {"request": request})
+
+
+@router.get("/widget-test/custom-button", response_class=HTMLResponse)
+async def widget_test_custom_button(request: Request):
+    """Bring-your-own-button modal variant."""
+    return templates.TemplateResponse("widget_test/custom_button.html", {"request": request})
